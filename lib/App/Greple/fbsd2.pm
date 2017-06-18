@@ -1,10 +1,10 @@
 =head1 NAME
 
-daemon3 - Module for translation of the book "The Design and Implementation of the FreeBSD Operating System"
+fbsd2 - Module for translation of the book "The Design and Implementation of the FreeBSD Operating System 2nd Edition"
 
 =head1 SYNOPSIS
 
-greple -Mdaemon3 [ options ]
+greple -Mfbsd2 [ options ]
 
     --by <part>  makes <part> as a data record
     --in <part>  search from <part> section
@@ -40,9 +40,9 @@ So [ macro ] + [ e ] recovers original text, and [ macro ] + [ j ]
 produces Japanese version of book text.  You can do it by next
 command.
 
-    $ greple -Mdaemon3 --retrieve macro,e
+    $ greple -Mfbsd2 --retrieve macro,e
 
-    $ greple -Mdaemon3 --retrieve macro,j
+    $ greple -Mfbsd2 --retrieve macro,j
 
 
 =head1 OPTION
@@ -69,13 +69,13 @@ Retrieve specified part as a plain text.
 Special word I<all> means I<macro>, I<mark>, I<e>, I<j>, I<comment>,
 I<retain>, I<gap>.  Next command produces original text.
 
-    greple -Mdaemon3 --retrieve all
+    greple -Mfbsd2 --retrieve all
 
 If the I<part> start with minus ('-') character, it is removed from
 specification.  Without positive specification, I<all> is assumed. So
 next command print all lines other than I<retain> part.
 
-    greple -Mdaemon3 --retrieve -retain
+    greple -Mfbsd2 --retrieve -retain
 
 =item B<--colorcode>
 
@@ -88,30 +88,30 @@ Produce color-coded result.
 
 Produce original text.
 
-    $ greple -Mdaemon3 --retrieve macro,e
+    $ greple -Mfbsd2 --retrieve macro,e
 
 Search sequence of "system call" in Japanese text and print I<egjp>
 part including them.  Note that this print lines even if "system" and
 "call" is devided by newline.
 
-    $ greple -Mdaemon3 -e "system call" --by egjp --in j
+    $ greple -Mfbsd2 -e "system call" --by egjp --in j
 
 Seach English text block which include all of "socket", "system",
 "call", "error" and print I<egjp> block including them.
 
-    $ greple -Mdaemo3 "socket system call error" --by egjp --in e
+    $ greple -Mfbsd2 "socket system call error" --by egjp --in e
 
 Look the file conents each part colored in different color.
 
-    $ greple -Mdaemon3 --colorcode
+    $ greple -Mfbsd2 --colorcode
 
 Look the colored contents with all other staff
 
-    $ greple -Mdaemon3 --colorcode --all
+    $ greple -Mfbsd2 --colorcode --all
 
 Compare produced result to original file.
 
-    $ diff -U-1 <(lv file) <(greple -Mdaemon3 --retrieve macro,j) | sdif
+    $ diff -U-1 <(lv file) <(greple -Mfbsd2 --retrieve macro,j) | sdif
 
 =head1 TEXT FORMAT
 
@@ -185,7 +185,7 @@ Block start with ※ (kome-mark) character is comment block.
 
 =cut
 
-package App::Greple::daemon3;
+package App::Greple::fbsd2;
 
 use utf8;
 use strict;
@@ -194,11 +194,10 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use List::Util qw(min max);
-
 use App::Greple::Common;
 
 use Exporter 'import';
-our @EXPORT      = qw(&part);
+our @EXPORT      = qw(&part &wlist $opt_prefix);
 our %EXPORT_TAGS = ();
 our @EXPORT_OK   = qw();
 
@@ -362,13 +361,61 @@ sub setdata {
     }
 }
 
+use Bombay::Dict;
+#use Bombay::Dict::BsdRoff qw(wordlist);
+
+sub wlist {
+    use Data::Dumper;
+
+    my @list = wordlist($_);
+    if (@list) {
+	$_ = main::color('B', $_) . main::color('R', Dumper \@list);
+    }
+
+    $_;
+}
+
+######################################################################
+
+use JSON::PP;
+
+our $opt_prefix = '';
+my @region_eg;
+
+sub dict_print {
+    my %attr = @_;
+    my $file = $attr{&FILELABEL};
+    my($label) = $file =~ /([\w\d_]+)\.j/ or die $file;
+    my $json = JSON::PP
+	->new
+	->convert_blessed
+	->pretty
+	->indent_length(2)
+	->allow_nonref(0);
+
+    my @dict;
+    my @matched = @{$attr{matched}};
+    for my $i (0 .. $#matched) {
+	my $r = $matched[$i];
+	my($offset, $length) = ($r->[0], $r->[1] - $r->[0]);
+	my $txt = substr $_, $offset, $length;
+	push @dict, Bombay::Dict->new(
+	    Label => sprintf("%s%s:%04d", $opt_prefix, $label, $i + 1),
+	    Text => $txt,
+	    Dict => 1,
+	    );
+    }
+    $json->encode(\@dict);
+}
+
 1;
 
 __DATA__
 
 option default --icode=guess
 
-define &part &App::Greple::daemon3::part
+define $PKG &App::Greple::fbsd2
+define &part $PKG::part
 
 define :comment: ^※.*\n(?:(?!\.(?:EG|JP|EJ)).+\n)*
 option --nocomment --exclude :comment:
@@ -401,6 +448,9 @@ option --colorcode  --need 1 --regioncolor \
 		    --le &part(mark)    --cm Y \
 		    --le &part(gap)     --cm X
 
+option --ed1 --chdir $ENV{FreeBSDBook} --glob 1st_FreeBSD/daemon3/c??.*/*.j
+option --ed2 --chdir $ENV{FreeBSDBook} --glob 2nd_FreeBSD/c??.*/*.j
+
 help --jp           print Japanese chunk
 help --eg           print English chunk
 help --egjp         print Japanese/English chunk
@@ -412,3 +462,10 @@ help --inej         search English/Japanese text
 
 help --retrieve     retrieve given part in plain text
 help --colorcode    show each part in color-coded
+
+option --btest --cm &wlist
+
+builtin --prefix=s $opt_prefix
+option --mkdict \
+	--all --le &part(eg) \
+	--print $PKG::dict_print
