@@ -195,6 +195,7 @@ use Carp;
 use Data::Dumper;
 use List::Util qw(min max);
 use App::Greple::Common;
+use Bombay::RoffDoc;
 
 use Exporter 'import';
 our @EXPORT      = qw(&part &wlist $opt_prefix);
@@ -203,176 +204,28 @@ our @EXPORT_OK   = qw();
 
 END { }
 
-{
-    package LabeledRegionList;
-
-    sub new {
-	my $class = shift;
-	my $obj = bless { }, $class;
-	$obj->create(@_) if @_;
-	$obj;
-    }
-    sub create {
-	my $obj = shift;
-	map { $obj->{$_} = [] } @_;
-    }
-    sub getRef {
-	my($obj, $tag) = @_;
-	$obj->{$tag};
-    }
-    sub getList {
-	my($obj, $tag) = @_;
-	@{$obj->getRef($tag)};
-    }
-    sub getSortedList {
-	my $obj = shift;
-	do {
-	    sort { $a->[0] <=> $b->[0] }
-	    map  { $obj->getList($_) }
-	    @_;
-	};
-    }
-    sub enhance ($$$) {
-	my($obj, $tag, $ent) = @_;
-	my $ref = $obj->getRef($tag);
-	if (@$ref == 0) {
-	    push @$ref, $ent;
-	} else {
-	    $ref->[-1] = [ $ref->[-1][0], $ent->[1] ];
-	}
-    }
-    sub push {
-	my $obj = shift;
-	my $tag = shift;
-	my $list = $obj->getRef($tag) or die "$tag: invalid name\n";
-	CORE::push @$list, @_;
-    }
-    sub clean {
-	my $obj = shift;
-	for my $key (keys %$obj) {
-	    @{$obj->{$key}} = ();
-	}
-    }
-    sub tags {
-	keys %{+shift};
-    }
-}
 
 my $target = -1;
-    
-my $region =
-    new LabeledRegionList
-    qw(macro mark e j egjp eg jp retain comment com1 com2 com3 gap);
+my $region;
+my $file;
 
-my @all = qw(macro mark e j comment retain gap);
+sub setup {
+    if ($target != \$_) {
+	$region = new Bombay::RoffDoc ( TEXT => $_, NAME => $file );
+	$target = \$_;
+    }
+}
 
 sub part {
     my %arg = @_;
-    my $file = delete $arg{&FILELABEL} or die;
+    $file = delete $arg{&FILELABEL};
 
-    if ($target != \$_) {
-	$region->clean;
-	&setdata($region);
-	$target = \$_;
-    }
-
-    if (exists $arg{all}) {
-	my $val = delete $arg{all};
-	map { $arg{$_} = $val } @all;
-    }
-
-    my @posi = grep $arg{$_}, grep /^\w+$/, keys %arg;
-    my @nega = map { s/^-//; $_ } grep /^-/, keys %arg;
-
-    my @part = do {
-	if (@nega) {
-	    my %nega = map { ($_, 1) } @nega;
-	    grep { not $nega{$_} } @posi ? @posi : @all;
-	} else {
-	    @posi;
-	}
-    };
-
-    $region->getSortedList(@part);
+    setup;
+    _part(%arg);
 }
 
-sub setdata {
-    my $region = shift;
-    my $pos = 0;
-
-    while (m{	\G
-		(?<macro>    (?s:.*?) )
-		(?<start_eg> ^\.EG.*\n) (?<eg> (?s:.*?\n))
-		(?<start_jp> ^\.JP.*\n) (?<jp> (?s:.*?\n))
-		(?<end>      ^\.EJ.*    (?:\n|\z))
-	}mgx) {
-
-	$pos = pos();
-
-	$region->push("macro", [ $-[1], $+[1] ]) if $-[1] != $+[1];
-	$region->push("mark",
-		      [ $-[2], $+[2] ], [ $-[4], $+[4] ], [ $-[6], $+[6] ]);
-	my $eg = [ $-[3], $+[3] ];
-	my $jp = [ $-[5], $+[5] ];
-	my $trans = $+{jp};
-
-	if ($trans !~ /\n\n/) {
-	    $region->push("egjp", [ $eg->[0], $jp->[1] ]);
-	    $region->push("e", $eg);
-	    $region->push("j", $jp);
-	    $region->push("eg", $eg);
-	    $region->push("jp", $jp);
-	    next;
-	}
-
-	$region->push("retain", $eg);
-
-	my($s, $e) = @$jp;
-	my $i = 0;
-	my $lang = sub { qw(e j)[$i] };
-	my $part = sub { qw(eg jp)[$i] };
-	my $toggle = sub { $i ^= 1 };
-	while ($trans =~ /^((?<kome>(?>※*)).*?\n)(\n+|\z)/smg) {
-	    my $ent = [ $s + $-[1], $s + $+[1] ];
-	    my $gap = [ $s + $-[3], $s + $+[3] ];
-	    $region->push("gap", $gap) if $gap->[0] != $gap->[1];
-	    if ($+{kome}) {
-		my $level = min(length $+{kome}, 3);
-		&$toggle;
-		$region->push("comment", $ent);
-		$region->push("com".$level, $ent);
-		$region->enhance(&$part, $ent);
-		$region->enhance("egjp", $ent);
-	    } else {
-		$region->push(&$lang, $ent);
-		$region->push(&$part, $ent);
-		if (&$lang eq 'e') {
-		    $region->push("egjp", $ent);
-		} else {
-		    $region->enhance("egjp", $ent);
-		}
-	    }
-	    &$toggle;
-	}
-    }
-
-    if ($pos > 0 and $pos != length) {
-	$region->push("macro", [ $pos, length ]);
-    }
-}
-
-use Bombay::Dict;
-#use Bombay::Dict::BsdRoff qw(wordlist);
-
-sub wlist {
-    use Data::Dumper;
-
-    my @list = wordlist($_);
-    if (@list) {
-	$_ = main::color('B', $_) . main::color('R', Dumper \@list);
-    }
-
-    $_;
+sub _part {
+    $region->part(@_);
 }
 
 ######################################################################
@@ -380,7 +233,6 @@ sub wlist {
 use JSON::PP;
 
 our $opt_prefix = '';
-my @region_eg;
 
 sub dict_print {
     my %attr = @_;
@@ -390,6 +242,7 @@ sub dict_print {
 	->new
 	->convert_blessed
 	->pretty
+	->canonical
 	->indent_length(2)
 	->allow_nonref(0);
 
@@ -443,7 +296,7 @@ option --colorcode  --need 1 --regioncolor \
 		    --le &part(comment) --cm R \
 		    --le &part(macro)   --cm C \
 		    --le &part(e)       --cm B \
-		    --le &part(j)       --cm K \
+		    --le &part(j)       --cm X \
 		    --le &part(retain)  --cm W \
 		    --le &part(mark)    --cm Y \
 		    --le &part(gap)     --cm X
@@ -462,8 +315,6 @@ help --inej         search English/Japanese text
 
 help --retrieve     retrieve given part in plain text
 help --colorcode    show each part in color-coded
-
-option --btest --cm &wlist
 
 builtin --prefix=s $opt_prefix
 option --mkdict \
