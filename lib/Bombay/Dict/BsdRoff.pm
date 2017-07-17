@@ -34,7 +34,8 @@ BEGIN {
 	qw(EG JP EG),
 	qw(IX ss Bl Xs CP RT bp Xc Xs Px ZZ EQ EN CO),
 	qw(Te Fe),
-	qw(nh ce sp ps fi nf nr ds rm hy so in pl br mk rt rn ft ti),
+	qw(nh ce sp ps fi nf nr ds rm hy hw so in pl br mk rt rn ft ti),
+	qw(SE)
 	);
     $decorate_re = mkpat(
 	qw(RN Rn SC Sc FN Fn NM Nm PN Pn GL Gl AM SM Sm Vr VR NS Ns),
@@ -91,7 +92,9 @@ sub cleanup {
     }xgme;
 
     s/\\[cp]$//mg;		# \c, \p
-    s/^\.\\".*\n//mg;		# .\"
+    s/^(?!.*GLOSSARY TERM)\.\\".*\n//mg;		
+				# .\" コメント
+				# ただし GLOSSARY 情報を除く
     s/\\\([a-z]{2}//g;		# \(em, \(en ...
     s/\\f(?:\w|\(\w\w)//g;	# \fR, \f(BI ...
     s/\\s[-+]?\d+//g;		# \s10, \s-1, \s+1

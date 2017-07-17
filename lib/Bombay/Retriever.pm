@@ -20,7 +20,17 @@ sub new {
 	BASEDIR => "",
 	DOCS => {},
     }, $class;
+
+    $obj->configure(@_) if @_;
+
     $obj;
+}
+
+sub configure {
+    my $obj = shift;
+    while ((my($k, $v) = splice @_, 0, 2) >= 2) {
+	$obj->{$k} = $v;
+    }
 }
 
 sub get_text {
@@ -29,9 +39,10 @@ sub get_text {
 
     my $label = $arg{LABEL} or die;
 
-    my($book, $chap, @rest) = split ':', $label;
-    my $doc = $obj->{DOCS}->{"$book:$chap"} //= do {
-	my $file = sprintf "%s%s/%s.j", $obj->{BASEDIR}, $book, $chap;
+    my $docname = $label =~ s/: \d+ (?: :[ej] )?$//xr;
+    my $doc = $obj->{DOCS}->{$docname} //= do {
+	$docname =~ s/:/\//g;
+	my $file = sprintf "%s%s.j", $obj->{BASEDIR}, $docname;
 	new Bombay::RoffDoc ( FILE => $file ) or die;
     };
 
