@@ -124,9 +124,10 @@ sub new {
     }
 
     if (my $name = $arg{NAME} // $arg{FILE}) {
-	if ($name =~ m{ ([^/]+) / ([^/]+) \.\w+ $ }x) {
-	    $arg{LABEL} = "$1:$2:%04d";
-	}
+	my $prefix = $arg{PREFIX} // "";
+	$name =~ s/\.\w+$//;
+	$name =~ s{/}{:}g;
+	$arg{LABEL} = "${prefix}${name}:%04d";
     }
 
     $obj->{TEXT} = $text;

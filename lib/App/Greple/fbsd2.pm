@@ -196,6 +196,7 @@ use Data::Dumper;
 use List::Util qw(min max);
 use App::Greple::Common;
 use Bombay::RoffDoc;
+use Bombay::Dict;
 
 use Exporter 'import';
 our @EXPORT      = qw(&part &wlist $opt_prefix);
