@@ -285,6 +285,7 @@ option --in       --inside &part($<shift>)
 option --jp       --by jp
 option --eg       --by eg
 option --egjp     --by egjp
+option --para     --by para
 option --comment  --by comment
 
 option --injp      --in j --roffsafe --nocomment
@@ -302,8 +303,11 @@ option --colorcode  --need 1 --regioncolor \
 		    --le &part(mark)    --cm Y \
 		    --le &part(gap)     --cm X
 
-option --ed1 --chdir $ENV{FreeBSDBook} --glob 1st_FreeBSD/daemon3/c??.*/*.j
-option --ed2 --chdir $ENV{FreeBSDBook} --glob 2nd_FreeBSD/c??.*/*.j
+option --ed1 --chdir $ENV{FreeBSDBook}/1st_FreeBSD/daemon3 --glob c??.*/*.j
+option --ed2 --chdir $ENV{FreeBSDBook}/2nd_FreeBSD/ --glob c??.*/*.j
+
+option --gloss1 --chdir $ENV{FreeBSDBook}/1st_FreeBSD/daemon3/c15.gloss --glob */*.j
+option --gloss2 --chdir $ENV{FreeBSDBook}/2nd_FreeBSD/c16.gloss --glob defs-*/*.j
 
 help --jp           print Japanese chunk
 help --eg           print English chunk

@@ -104,7 +104,7 @@ END { }
     }
 }
 
-my @regions = qw(macro mark e j comment retain gap egjp eg jp com1 com2 com3);
+my @regions = qw(macro mark e j comment retain gap egjp eg jp com1 com2 com3 para);
 my @all =     qw(macro mark e j comment retain gap);
 
 sub new {
@@ -230,6 +230,7 @@ sub set_data {
 	my $eg = [ $-[3], $+[3] ];
 	my $jp = [ $-[5], $+[5] ];
 	my $trans = $+{jp};
+	$region->push("para", $jp);
 
 	if ($trans !~ /\n\n/) {
 	    $region->push("egjp", [ $eg->[0], $jp->[1] ]);
