@@ -20,6 +20,7 @@ use Encode;
 use Data::Dumper;
 
 my $ignore_re;
+my $allow_re;
 my $decorate_re;
 my @fromto_re;
 
@@ -35,13 +36,15 @@ BEGIN {
 	qw(IX ss Bl Xs CP RT bp Xc Xs Px ZZ EQ EN CO),
 	qw(Te Fe),
 	qw(nh ce sp ps fi nf nr ds rm hy hw so in pl br mk rt rn ft ti),
-	qw(SE)
 	);
     $decorate_re = mkpat(
 	qw(RN Rn SC Sc FN Fn NM Nm PN Pn GL Gl AM SM Sm Vr VR NS Ns),
 	qw(Ls Ll),
 	qw(I B R ES TI FI FL TL FG Xl),
 	'(?:H|CT)\s+\d+',
+	);
+    $allow_re = mkpat(
+	qw(SE)
 	);
 
 #    s/^\.(?:ig|de).*\n (?:.*\n)*? ^\.\. .*\n//xmg;	# .ig, .de
@@ -99,7 +102,7 @@ sub cleanup {
     s/\\f(?:\w|\(\w\w)//g;	# \fR, \f(BI ...
     s/\\s[-+]?\d+//g;		# \s10, \s-1, \s+1
 
-    if (/^\.\w\w?\b/m) {
+    if (/^\.\w\w?\b/m and !/^\.(?:$allow_re)/m) {
 	print $keep, "\n-->\n\n", $_;
 	die;
     }
