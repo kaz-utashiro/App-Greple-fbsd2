@@ -19,6 +19,9 @@ greple -Mfbsd2 [ options ]
     --retrieve   retrieve given part in plain text
     --colorcode  show each part in color-coded
 
+    --ed{1,2}    edtion 1 & 2 files
+    --gloss{1,2} glossary files of edition 1 & 2
+
 =head1 DESCRIPTION
 
 Text is devided into forllowing parts.
@@ -27,6 +30,7 @@ Text is devided into forllowing parts.
     j        Japanese text
     eg       English  text and comment
     jp       Japanese text and comment
+    para     paragraph including multiple eg+jp
     macro    Common roff macro
     retain   Retained original text
     comment  Comment block
@@ -80,6 +84,14 @@ next command print all lines other than I<retain> part.
 =item B<--colorcode>
 
 Produce color-coded result.
+
+=item B<--ed1>, B<--ed2>, B<--gloss1>, B<--gloss2>
+
+Seach edtion 1 and edtion 2 text files, and glossary files of each.
+
+=item B<--lint>
+
+Execute sanity check for eg-jp document format.
 
 =back
 
@@ -230,6 +242,86 @@ sub _part {
 }
 
 ######################################################################
+# lint
+######################################################################
+
+sub lint {
+    my %attr = @_;
+    my $file = $attr{&FILELABEL};
+
+    for my $param (
+	[ 'e',
+	  sub { /P{ascii}/ },
+	  "Multibyte character in English part."
+	],
+	[ [ qw(e j) ],
+	  sub { /※/ },
+	  "Possibly comment in text part."
+	],
+	)
+    {
+	my($where, $sub, $msg) = @{$param};
+	my @part = ref $where eq 'ARRAY' ? @{$where} : ($where);
+	my @p = part(map { $_ => 1 } @part);
+	for my $r (@p) {
+	    my($from, $to) = @{$r};
+	    my $text = substr $_, $from, $to - $from;
+	    if (do {local *_ = \$text; $sub->() }) {
+		print "$file: $msg\n";
+		$text =~ s/^/\t/mg;
+		print $text;
+	    }
+	}
+	
+    }
+}
+
+######################################################################
+# progress
+######################################################################
+
+our $opt_progress_all = 0;
+my $progress_files = 0;
+my $progress_total = 0;
+my $progress_done = 0;
+
+sub count_progress {
+    my %attr = @_;
+    my $file = $attr{&FILELABEL};
+    my $text = $_;
+
+    my @matched = @{$attr{matched}};
+    my $total = @matched;
+    my $done = grep {
+	substr($text, $_->[0], $_->[1] - $_->[0]) !~ /■/;
+    } @matched;
+
+    $progress_files ++;
+    $progress_total += $total;
+    $progress_done  += $done;
+
+    @{$attr{matched}} = ();
+    $opt_progress_all ? comp($done, $total) : "";
+}
+
+sub show_progress {
+    return if $progress_total == 0;
+    print comp($progress_done, $progress_total);
+    printf(" in %2d files", $progress_files) if $progress_files > 1;
+    print "\n";
+}
+
+sub comp {
+    my($done, $total) = @_;
+    sprintf("%4d/%4d (%3d%%)",
+	    $done,
+	    $total,
+	    $done / $total * 100);
+}
+
+######################################################################
+# dictionary
+######################################################################
 
 use JSON::PP;
 
@@ -325,3 +417,30 @@ builtin --prefix=s $opt_prefix
 option --mkdict \
 	--all --le &part(eg) \
 	--print $PKG::dict_print
+
+builtin --progress_all! $opt_progress_all
+
+option --progress-all \
+    	--progress --progress_all
+
+option --progress \
+	--all --le &part(j) \
+	--continue \
+	--print $PKG::count_progress \
+	--epilogue $PKG::show_progress
+
+option --lint --begin $PKG::lint --re (?=never)match
+
+
+# 英語テキストに非ASCII文字があるのはおかしい
+option --check-nonascii \
+	-n --separate -e \P{ascii}+ --in e
+
+# テキストブロックに「※」があってはおかしい
+option --check-comm \
+	-n --separate -e ※+ --in e,j --by e,j
+
+option --check-word \
+	-n --uniqcolor --in j \
+	--exclude 'GLOSSARY PHONETIC.*\n' \
+	-f $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
