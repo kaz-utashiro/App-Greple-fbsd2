@@ -444,3 +444,8 @@ option --check-word \
 	-n --uniqcolor --in j \
 	--exclude 'GLOSSARY PHONETIC.*\n' \
 	-f $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
+
+# .JP セクションの最初の ■ を探す
+define (?#first-square) ^\.JP.*\n(?:(?!\.EG|.*■).*\n)*.*\K■
+option --todo --re (?#first-square)
+help --todo find first square mark in .JP section
