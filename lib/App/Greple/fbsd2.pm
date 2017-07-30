@@ -251,7 +251,7 @@ sub lint {
 
     for my $param (
 	[ 'e',
-	  sub { /P{ascii}/ },
+	  sub { /\P{ascii}/ },
 	  "Multibyte character in English part."
 	],
 	[ [ qw(e j) ],
