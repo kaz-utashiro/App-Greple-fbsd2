@@ -434,7 +434,7 @@ option --lint --begin $PKG::lint --re (?=never)match
 
 # 英語テキストに非ASCII文字があるのはおかしい
 option --check-nonascii \
-	-n --separate -e \P{ascii}+ --in e
+	-n --separate -e '\P{ascii}+' --in e
 
 # テキストブロックに「※」があってはおかしい
 option --check-comm \
