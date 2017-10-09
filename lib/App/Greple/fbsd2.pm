@@ -1,3 +1,5 @@
+=encoding utf8
+
 =head1 NAME
 
 fbsd2 - Module for translation of the book "The Design and Implementation of the FreeBSD Operating System 2nd Edition"
@@ -250,24 +252,25 @@ sub lint {
     my $file = $attr{&FILELABEL};
 
     for my $param (
-	[ 'e',
-	  sub { /\P{ascii}/ },
-	  "Multibyte character in English part."
-	],
-	[ [ qw(e j) ],
-	  sub { /※/ },
-	  "Possibly comment in text part."
-	],
+	{ part => 'e',
+	  test => sub { /\P{ascii}/ },
+	  mesg => "Multibyte character in English part."
+	},
+	{ part => [ qw(e j) ],
+	  test => sub { /※/ },
+	  mesg => "Possibly comment in text part."
+	},
 	)
     {
-	my($where, $sub, $msg) = @{$param};
-	my @part = ref $where eq 'ARRAY' ? @{$where} : ($where);
+	my @part = ref $param->{part} eq 'ARRAY' ? @{$param->{part}} : $param->{part};
+	my $test = $param->{test};
+	my $mesg = $param->{mesg};
 	my @p = part(map { $_ => 1 } @part);
 	for my $r (@p) {
 	    my($from, $to) = @{$r};
 	    my $text = substr $_, $from, $to - $from;
-	    if (do {local *_ = \$text; $sub->() }) {
-		print "$file: $msg\n";
+	    if (do {local *_ = \$text; $test->() }) {
+		printf "$file: %s\n", main::color('RS', " $mesg ");
 		$text =~ s/^/\t/mg;
 		print $text;
 	    }
@@ -445,7 +448,18 @@ option --check-word \
 	--exclude 'GLOSSARY PHONETIC.*\n' \
 	-f $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
 
+# .JP セクションの最初の ■ 1つを探す
+define (?#first-single-square) (?x)	\
+    (?> ^\.JP .*\n )			\
+    (?> (?: (?!\.EG|■) .*\n		\
+            |				\
+            ■■ .*\n			\
+        ) * ) \K			\
+    ■
+option --todo --re (?#first-single-square)
+help --todo find first single square mark in .JP section
+
 # .JP セクションの最初の ■ を探す
-define (?#first-square) ^\.JP.*\n(?:(?!\.EG|.*■).*\n)*.*\K■
-option --todo --re (?#first-square)
-help --todo find first square mark in .JP section
+define (?#first-square) (?>^\.JP.*\n)(?:(?!\.EG|■).*\n)*.*?\K■+
+option --todo-all --re (?#first-square)
+help --todo-all find first square mark in .JP section

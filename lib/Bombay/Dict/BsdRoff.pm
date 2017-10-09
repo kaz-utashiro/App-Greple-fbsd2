@@ -17,6 +17,7 @@ our @EXPORT_OK   = qw(wordlist);
 use utf8;
 use Encode;
 
+use List::Util qw(pairmap);
 use Data::Dumper;
 
 my $ignore_re;
@@ -46,25 +47,13 @@ BEGIN {
     $allow_re = mkpat(
 	qw(SE)
 	);
-
-#    s/^\.(?:ig|de).*\n (?:.*\n)*? ^\.\. .*\n//xmg;	# .ig, .de
-#    s/^\.\[.*\n (?:.*\n)*? ^\.\] .*\n//xmg;		# .[ ... .]
-#    s/^\.CI.*\n (?:.*\n)*? ^\.Ce .*\n//xmg;
-#    s/^\.Fl.*\n (?:.*\n)*? ^\.Fe .*\n//xmg;
-#    s/^\.Tl.*\n (?:.*\n)*? ^\.Te .*\n//xmg;
-#    s/^\.TS.*\n (?:.*\n)*? ^\.TE .*\n//xmg;
-#    s/^\.DS.*\n (?:.*\n)*? ^\.DE .*\n//xmg;
-#    s/^\.if.*\n (?:.*\n)*? ^\.\\\} .*\n//xmg;
-
-    my @pair = qw(
+    @fromto_re = pairmap {
+	qr/^\.\Q${a}\E .*\n (?:.*\n)*? ^\.\Q${b}\E .*\n/xm
+    }
+    qw(
 	ig .   de .   if \}  [  ]
 	CI Ce  Fl Fe  Tl Te  TS TE  DS DE
     );
-    @fromto_re = do {
-	map { qr/^\.\Q$_->[0]\E .*\n (?:.*\n)*? ^\.\Q$_->[1]\E .*\n/xm }
-	map { [ splice @pair, 0, 2 ] }
-	1 .. @pair / 2;
-    };
 }
 
 sub uniq {
