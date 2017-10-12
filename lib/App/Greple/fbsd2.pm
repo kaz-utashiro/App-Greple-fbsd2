@@ -24,6 +24,13 @@ greple -Mfbsd2 [ options ]
     --ed{1,2}    edtion 1 & 2 files
     --gloss{1,2} glossary files of edition 1 & 2
 
+    --check-word check against dictionary
+
+    --subst-word --all    get substituted content
+    --subst-word-diff     show diff with corrected content
+    --subst-word-newfile  careate new file with .new suffix
+
+
 =head1 DESCRIPTION
 
 Text is devided into forllowing parts.
@@ -197,6 +204,10 @@ Block start with ※ (kome-mark) character is comment block.
     protected mode は、ここでしか使われていないため、
     protection mode と誤解されないために特権モードと訳すことにする。
 
+=head2 FILES
+
+    $ENV{FreeBSDBook}/WORDLIST.txt
+
 =cut
 
 package App::Greple::fbsd2;
@@ -283,7 +294,7 @@ sub lint {
 # progress
 ######################################################################
 
-our $opt_progress_all = 0;
+our $opt_progress_each = 0;
 my $progress_files = 0;
 my $progress_total = 0;
 my $progress_done = 0;
@@ -304,7 +315,7 @@ sub count_progress {
     $progress_done  += $done;
 
     @{$attr{matched}} = ();
-    $opt_progress_all ? comp($done, $total) : "";
+    $opt_progress_each ? comp($done, $total) : "";
 }
 
 sub show_progress {
@@ -421,10 +432,10 @@ option --mkdict \
 	--all --le &part(eg) \
 	--print $PKG::dict_print
 
-builtin --progress_all! $opt_progress_all
+builtin --progress_each! $opt_progress_each
 
-option --progress-all \
-    	--progress --progress_all
+option --progress-each \
+    	--progress --progress_each
 
 option --progress \
 	--all --le &part(j) \
@@ -443,10 +454,25 @@ option --check-nonascii \
 option --check-comm \
 	-n --separate -e ※+ --in e,j --by e,j
 
+define $WORDLIST $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
+
 option --check-word \
 	-n --uniqcolor --in j \
 	--exclude 'GLOSSARY PHONETIC.*\n' \
-	-f $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
+	-f $WORDLIST
+
+option --subst-f-file -f $<1> --subst_file $<shift>
+
+option --option-subst \
+	-Msubst --subst \
+	--in j --exclude 'GLOSSARY PHONETIC.*\n'
+
+option --subst-word \
+	--option-subst --subst-f-file $WORDLIST
+
+option --subst-word-diff    --subst-word --diff
+option --subst-word-newfile --subst-word --create
+
 
 # .JP セクションの最初の ■ 1つを探す
 define (?#first-single-square) (?x)	\
