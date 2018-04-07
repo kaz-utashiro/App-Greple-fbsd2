@@ -427,12 +427,12 @@ help --inej         search English/Japanese text
 help --retrieve     retrieve given part in plain text
 help --colorcode    show each part in color-coded
 
-builtin --prefix=s $opt_prefix
+builtin prefix=s $opt_prefix
 option --mkdict \
 	--all --le &part(eg) \
 	--print $PKG::dict_print
 
-builtin --progress_each! $opt_progress_each
+builtin progress_each! $opt_progress_each
 
 option --progress-each \
     	--progress --progress_each
@@ -456,10 +456,12 @@ option --check-comm \
 
 define $WORDLIST $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
 
+option --wordlist -f $WORDLIST
+
 option --check-word \
 	-n --uniqcolor --in j \
 	--exclude 'GLOSSARY PHONETIC.*\n' \
-	-f $WORDLIST
+	--wordlist
 
 option --subst-f-file -f $<1> --subst_file $<shift>
 
