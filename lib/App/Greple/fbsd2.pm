@@ -30,6 +30,8 @@ greple -Mfbsd2 [ options ]
     --subst-word-diff     show diff with corrected content
     --subst-word-newfile  careate new file with .new suffix
 
+    --json       produce ".j" equivalent JSON data
+
 
 =head1 DESCRIPTION
 
@@ -212,6 +214,7 @@ Block start with ※ (kome-mark) character is comment block.
 
 package App::Greple::fbsd2;
 
+use v5.14;
 use utf8;
 use strict;
 use warnings;
@@ -337,7 +340,7 @@ sub comp {
 # dictionary
 ######################################################################
 
-use JSON::PP;
+use JSON;
 
 our $opt_prefix = '';
 
@@ -345,7 +348,7 @@ sub dict_print {
     my %attr = @_;
     my $file = $attr{&FILELABEL};
     my($label) = $file =~ /([\w\d_]+)\.j/ or die $file;
-    my $json = JSON::PP
+    my $json = JSON
 	->new
 	->convert_blessed
 	->pretty
@@ -366,6 +369,46 @@ sub dict_print {
 	    );
     }
     $json->encode(\@dict);
+}
+
+######################################################################
+# json
+######################################################################
+
+use JSON;
+
+our $opt_json_format = 'atomic';
+
+my $json = JSON
+    ->new
+    ->convert_blessed
+    ->pretty
+    ->canonical
+    ->indent_length(2)
+    ->allow_nonref(0);
+
+sub json {
+    my %attr = @_;
+    my $file = $attr{&FILELABEL};
+    my $doc = new Bombay::RoffDoc TEXT => $_;
+    my @list = do {
+	if ($opt_json_format eq 'atomic') {
+	    $doc->roff_atomic_list;
+	}
+	elsif ($opt_json_format eq 'struct') {
+	    $doc->structured_list;
+	}
+	elsif ($opt_json_format eq 'plain') {
+	    $doc->plain_list;
+	}
+	else {
+	    die "Unknown JSON format: $opt_json_format\n";
+	}
+    };
+    unshift @list, {
+	file => $file,
+    };
+    $json->encode(\@list);
 }
 
 1;
@@ -431,6 +474,12 @@ builtin prefix=s $opt_prefix
 option --mkdict \
 	--all --le &part(eg) \
 	--print $PKG::dict_print
+
+builtin json-format=s $opt_json_format;
+
+option --json \
+	--all --re '\A' \
+	--print $PKG::json
 
 builtin progress_each! $opt_progress_each
 

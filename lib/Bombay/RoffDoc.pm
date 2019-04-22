@@ -1,5 +1,6 @@
 package Bombay::RoffDoc;
 
+use v5.14;
 use utf8;
 use strict;
 use warnings;
@@ -20,8 +21,7 @@ our $debug;
 
 END { }
 
-{
-    package LabeledRegionList;
+package LabeledRegionList {
     use Data::Dumper;
 
     sub new {
@@ -114,10 +114,10 @@ sub new {
     my $text;
 
     if (my $file = $arg{FILE}) {
-	open F, $file or croak "$file: $!";
-	binmode F, "encoding(guess)";
-	$text = do { local $/; <F> };
-	close F;
+	open my $fh, $file or croak "$file: $!";
+	binmode $fh, "encoding(guess)";
+	$text = do { local $/; <$fh> };
+	close $fh;
     }
     elsif ($arg{TEXT}) {
 	$text = $arg{TEXT};
@@ -184,8 +184,7 @@ sub get_text {
     } @r;
 }
 
-{
-    package LABEL;
+package LABEL {
     use Data::Dumper;
     sub new {
 	my $class = shift;
@@ -292,6 +291,180 @@ sub set_data {
     if ($pos > 0 and $pos != length) {
 	$region->push("macro", [ $pos, length ]);
     }
+}
+
+######################################################################
+
+##
+## JSON
+##
+
+sub plain_list {
+    my $doc = shift;
+    my $text = $doc->text;
+    my @part = qw(macro mark e j com1 com2 com3 retain gap);
+    do {
+	sort { $a->[2] <=> $b->[2] }
+	map {
+	    [ @$_, substr($text, $_->[2], $_->[3] - $_->[2] ) ];
+	}
+	map {
+	    my $part = $_;
+	    my $index = 0;
+	    map { [ $part, $index++, @$_ ] } $doc->part($part => 1);
+	}
+	@part
+    };
+}
+
+sub structured_list {
+    my $doc = shift;
+    my @plain = $doc->plain_list;
+
+    my @doc;
+    my $current = \@doc;
+    my $lang;
+    for my $ent (@plain) {
+	my($type, $i, $s, $e, $text) = @$ent;
+	if (0) {}
+	elsif ($type eq "gap")    { next }
+	elsif ($type eq "retain") { next }
+	if ($type eq "mark") {
+	    if ($text =~ /^\.EG/) {
+		push @doc, { eg => [], jp => [] };
+		$current = $doc[-1];
+	    }
+	    elsif ($text =~ /^\.JP/) {
+		$current = $doc[-1];
+	    }
+	    elsif ($text =~ /^\.EJ/) {
+		$current = \@doc;
+	    }
+	    else { die }
+	    next;
+	}
+	elsif ($type =~ /^([ej])$/) {
+	    $lang = { e => "eg", j => "jp" }->{ $1 };
+	}
+	elsif ($type =~ /^com\d/) {
+	    ;
+	}
+	elsif ($type eq "macro") {
+	    ;
+	}
+	else {
+	    die $type;
+	}
+	if (ref $current eq 'HASH') {
+	    push @{$current->{$lang}}, [ split /\n/, $text ];
+	} else {
+	    push @{$current}, [ split /\n/, $text ];
+	}
+    }
+    @doc;
+}
+
+sub roff_sentence {
+    my $attr = ref $_[0] eq 'HASH' ? shift : {};
+    [ $attr, map { _text($_) } @_ ];
+}
+
+my $roffarg_re = qr{
+    (?|
+      " ( (?:\\"|[^"])* ) "
+      |
+      ( [^"\s]+ )
+    )
+}x;
+
+sub roff_macro {
+    local $_ = shift;
+    my($command, $arg1, $arg2) = do {
+	m{
+	    ^
+	    (?|
+	      (\.\\\") (.*)	# comment
+	      |
+	      (\.\S\S?+)
+	      (?: \s+ $roffarg_re (?: \s+ $roffarg_re)? )?
+	    )
+	}x;
+    } or die "Format error: \"$_\"\n";
+    ($command, $arg1 // (), $arg2 // ());
+}
+
+sub _text {
+    local $_ = shift;
+    if (/\A\./) {
+	[ roff_macro($_) ] ;
+    } else {
+	[ t => $_ ] ;
+    }
+}
+
+sub roff_atomic_list {
+    my $doc = shift;
+    my @plain = $doc->plain_list;
+
+    my @doc;
+    my $current = \@doc;
+    my $lastlang;
+    my %lang = ( eg => 1, jp => 2 );
+    my $sentence_n = my $comment_n = 0;
+
+    for my $ent (@plain) {
+	my($type, $i, $s, $e, $text) = @$ent;
+	my $lang;
+	my %attr;
+
+	if (0) {}
+	elsif ($type eq "gap")    { next }
+	elsif ($type eq "retain") { next }
+	elsif ($type eq "mark") {
+	    if ($text =~ /^\.EG/) {
+		push @doc, $current = { eg => [], jp => [] };
+	    }
+	    elsif ($text =~ /^\.JP/) {
+		;
+	    }
+	    elsif ($text =~ /^\.EJ/) {
+		$current = \@doc;
+	    }
+	    else { die }
+	    next;
+	}
+	elsif ($type =~ /^([ej])$/) {
+	    $lastlang = $lang = { e => "eg", j => "jp" }->{ $1 };
+	    %attr = (
+		seq => $lang eq 'eg' ? ++$sentence_n : $sentence_n,
+		type => 's',
+		);
+	}
+	elsif ($type =~ /^com(\d)$/) {
+	    $lang = $lastlang or die;
+	    %attr = (
+		seq   => ++$comment_n,
+		type  => 'c',
+		level => $1,
+		);
+	}
+	elsif ($type eq "macro") {
+	    $attr{seq} = ++$sentence_n;
+	}
+	else {
+	    die $type;
+	}
+
+	## e, j, com*
+	if ($lang) {
+	    push @{$current->{$lang}}, roff_sentence(\%attr, split /\n/, $text);
+	}
+	## macro
+	else {
+	    push @{$current}, roff_sentence(\%attr, split /\n/, $text);
+	}
+    }
+    @doc;
 }
 
 1;
