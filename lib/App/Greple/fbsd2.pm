@@ -219,6 +219,7 @@ use utf8;
 use strict;
 use warnings;
 
+use open IO => ':utf8', ':std';
 use Carp;
 use Data::Dumper;
 use List::Util qw(min max);
@@ -227,7 +228,7 @@ use Bombay::RoffDoc;
 use Bombay::Dict;
 
 use Exporter 'import';
-our @EXPORT      = qw(&part &wlist $opt_prefix);
+our @EXPORT      = qw(&part &wlist $opt_prefix &pattern_file);
 our %EXPORT_TAGS = ();
 our @EXPORT_OK   = qw();
 
@@ -411,6 +412,25 @@ sub json {
     $json->encode(\@list);
 }
 
+######################################################################
+# read pattern file
+######################################################################
+
+use App::Greple::Regions qw(match_regions merge_regions);
+
+sub pattern_file {
+    my %arg = @_;
+    my $target = delete $arg{&FILELABEL} or die;
+    my $file = $arg{file} or die "parameter error";
+    open my $fh, '<:encoding(utf8)', $file or die "$file: $!";
+    my @r;
+    while (my $p = <$fh>) {
+	chomp $p;
+	push @r, match_regions pattern => qr/$p/;
+    }
+    merge_regions @r;
+}
+
 1;
 
 __DATA__
@@ -505,12 +525,16 @@ option --check-comm \
 
 define $WORDLIST $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
 
-option --wordlist -f $WORDLIST
+option --wordlist -Msubst --dict $WORDLIST
+
+option --exclude-file --exclude &pattern_file(file=$<shift>)
+
+option --exclude-words --exclude-file EXCLUDE.txt
 
 option --check-word \
-	-n --uniqcolor --in j \
-	--exclude 'GLOSSARY PHONETIC.*\n' \
-	--wordlist
+	--wordlist \
+	--in j \
+	--exclude 'GLOSSARY PHONETIC.*\n'
 
 option --subst-f-file -f $<1> --subst_file $<shift>
 
