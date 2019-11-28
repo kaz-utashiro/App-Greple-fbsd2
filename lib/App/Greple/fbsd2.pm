@@ -456,12 +456,12 @@ option --check-comm \
 
 define $WORDLIST $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
 
-option --wordlist -f $WORDLIST
+option --wordlist -Msubst --dict $WORDLIST
 
 option --check-word \
-	-n --uniqcolor --in j \
-	--exclude 'GLOSSARY PHONETIC.*\n' \
-	--wordlist
+	--wordlist \
+	--in j \
+	--exclude 'GLOSSARY PHONETIC.*\n'
 
 option --subst-f-file -f $<1> --subst_file $<shift>
 
