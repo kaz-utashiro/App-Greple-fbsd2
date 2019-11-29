@@ -1,5 +1,6 @@
 package Bombay::RoffDoc;
 
+use v5.14;
 use utf8;
 use strict;
 use warnings;
@@ -20,8 +21,7 @@ our $debug;
 
 END { }
 
-{
-    package LabeledRegionList;
+package LabeledRegionList {
     use Data::Dumper;
 
     sub new {
@@ -184,8 +184,7 @@ sub get_text {
     } @r;
 }
 
-{
-    package LABEL;
+package LABEL {
     use Data::Dumper;
     sub new {
 	my $class = shift;
