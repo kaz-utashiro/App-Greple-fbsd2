@@ -399,15 +399,15 @@ use JSON;
 
 our $opt_json_format = 'atomic';
 
-my $json = JSON
-    ->new
-    ->convert_blessed
-    ->pretty
-    ->canonical
-    ->indent_length(2)
-    ->allow_nonref(0);
-
 sub json {
+
+    state $json = JSON
+	->new
+	->convert_blessed
+	->pretty
+	->canonical
+	->allow_nonref(0);
+
     my %attr = @_;
     my $file = $attr{&FILELABEL};
     my $doc = new Bombay::RoffDoc TEXT => $_;
