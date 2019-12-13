@@ -24,11 +24,13 @@ greple -Mfbsd2 [ options ]
     --ed{1,2}    edtion 1 & 2 files
     --gloss{1,2} glossary files of edition 1 & 2
 
-    --check-word check against dictionary
+    --check-word             check against dictionary
+    --check-word --stat      show statistics only
+    --check-word --with-stat print with statistics
 
-    --subst-word --all    get substituted content
-    --subst-word-diff     show diff with corrected content
-    --subst-word-newfile  careate new file with .new suffix
+    --subst-word --diff    show diff with corrected content
+    --subst-word --create  create new file with .new suffix
+    --subst-word --replace replace file with backup
 
     --json       produce ".j" equivalent JSON data
 
@@ -228,7 +230,7 @@ use Bombay::RoffDoc;
 use Bombay::Dict;
 
 use Exporter 'import';
-our @EXPORT      = qw(&part &wlist $opt_prefix &pattern_file);
+our @EXPORT      = qw(&wlist $opt_prefix &pattern_file);
 our %EXPORT_TAGS = ();
 our @EXPORT_OK   = qw();
 
@@ -299,34 +301,17 @@ sub lint {
 ######################################################################
 
 our $opt_progress_each = 0;
-my $progress_files = 0;
-my $progress_total = 0;
-my $progress_done = 0;
+my %progress;
 
 sub count_progress {
     my %attr = @_;
     my $file = $attr{&FILELABEL};
-    my $text = $_;
 
-    my @matched = @{$attr{matched}};
-    my $total = @matched;
-    my $done = grep {
-	substr($text, $_->[0], $_->[1] - $_->[0]) !~ /■/;
-    } @matched;
+    my $progress = $progress{$file} //= {};
+    $progress->{TOTAL}++;
+    $progress->{DONE}++ unless /■/;
 
-    $progress_files ++;
-    $progress_total += $total;
-    $progress_done  += $done;
-
-    @{$attr{matched}} = ();
-    $opt_progress_each ? comp($done, $total) : "";
-}
-
-sub show_progress {
-    return if $progress_total == 0;
-    print comp($progress_done, $progress_total);
-    printf(" in %2d files", $progress_files) if $progress_files > 1;
-    print "\n";
+    return '';
 }
 
 sub comp {
@@ -335,6 +320,29 @@ sub comp {
 	    $done,
 	    $total,
 	    $done / $total * 100);
+}
+
+sub show_progress {
+    my $progress_files = keys %progress;
+    my($progress_total, $progress_done) = (0, 0);
+
+    for my $file (sort keys %progress) {
+	my $hash = $progress{$file};
+	my $total = $hash->{TOTAL} //= 0;
+	my $done  = $hash->{DONE}  //= 0;
+	$progress_total += $total;
+	$progress_done  += $done;
+	if ($opt_progress_each) {
+	    print comp $done, $total;
+	    print " $file\n";
+	}
+    }
+
+    return if $progress_total == 0;
+
+    print comp $progress_done, $progress_total;
+    printf " in %2d files", $progress_files if $progress_files > 1;
+    print "\n";
 }
 
 ######################################################################
@@ -418,15 +426,26 @@ sub json {
 
 use App::Greple::Regions qw(match_regions merge_regions);
 
+our $opt_hash_comment = 1;
+our $opt_slash_comment = 1;
 sub pattern_file {
     my %arg = @_;
     my $target = delete $arg{&FILELABEL} or die;
-    my $file = $arg{file} or die "parameter error";
-    open my $fh, '<:encoding(utf8)', $file or die "$file: $!";
+    my @files = grep { $arg{$_} == 1 } keys %arg;
     my @r;
-    while (my $p = <$fh>) {
-	chomp $p;
-	push @r, match_regions pattern => qr/$p/;
+    for my $file (@files) {
+	open my $fh, $file or die "$file: $!";
+	while (my $p = <$fh>) {
+	    chomp $p;
+	    if ($opt_hash_comment) {
+		next if $p =~ /^\s*#/;
+	    }
+	    if ($opt_slash_comment) {
+		$p =~ s{//.*}{};
+	    }
+	    next unless $p =~ /\S/;
+	    push @r, match_regions pattern => qr/$p/;
+	}
     }
     merge_regions @r;
 }
@@ -437,8 +456,7 @@ __DATA__
 
 option default --icode=guess
 
-define $PKG &App::Greple::fbsd2
-define &part $PKG::part
+define &part &__PACKAGE__::part
 
 define :comment: ^※.*\n(?:(?!\.(?:EG|JP|EJ)).+\n)*
 option --nocomment --exclude :comment:
@@ -499,7 +517,7 @@ builtin json-format=s $opt_json_format;
 
 option --json \
 	--all --re '\A' \
-	--print $PKG::json
+	--print &__PACKAGE__::json
 
 builtin progress_each! $opt_progress_each
 
@@ -507,12 +525,12 @@ option --progress-each \
     	--progress --progress_each
 
 option --progress \
-	--all --le &part(j) \
-	--continue \
-	--print $PKG::count_progress \
-	--epilogue $PKG::show_progress
+	--no-filename --only-matching --no-newline \
+	--le &part(j) \
+	--print    &__PACKAGE__::count_progress \
+	--epilogue &__PACKAGE__::show_progress
 
-option --lint --begin $PKG::lint --re (?=never)match
+option --lint --begin __PACKAGE__::lint --re (?=never)match
 
 
 # 英語テキストに非ASCII文字があるのはおかしい
@@ -524,29 +542,22 @@ option --check-comm \
 	-n --separate -e ※+ --in e,j --by e,j
 
 define $WORDLIST $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
+define $EXCLUDE $ENV{FreeBSDBook}/2nd_FreeBSD/EXCLUDE.txt
 
 option --wordlist -Msubst --dict $WORDLIST
 
-option --exclude-file --exclude &pattern_file(file=$<shift>)
-
-option --exclude-words --exclude-file EXCLUDE.txt
+option --exclude-file  --exclude &pattern_file($<shift>)
+option --exclude-words --exclude-file $EXCLUDE
 
 option --check-word \
 	--wordlist \
-	--in j \
-	--exclude 'GLOSSARY PHONETIC.*\n'
+	--exclude-words \
+	--in j
 
-option --subst-f-file -f $<1> --subst_file $<shift>
-
-option --option-subst \
-	-Msubst --subst \
-	--in j --exclude 'GLOSSARY PHONETIC.*\n'
-
-option --subst-word \
-	--option-subst --subst-f-file $WORDLIST
-
-option --subst-word-diff    --subst-word --diff
-option --subst-word-newfile --subst-word --create
+option --subst-word         --check-word --subst
+option --subst-word-diff    --check-word --diff
+option --subst-word-create  --check-word --create
+option --subst-word-replace --check-word --replace
 
 
 # .JP セクションの最初の ■ 1つを探す
