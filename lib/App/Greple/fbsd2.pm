@@ -302,12 +302,16 @@ sub lint {
 
 our $opt_progress_each = 0;
 my %progress;
+my @progress_files;
 
 sub count_progress {
     my %attr = @_;
     my $file = $attr{&FILELABEL};
 
-    my $progress = $progress{$file} //= {};
+    my $progress = $progress{$file} //= do {
+	push @progress_files, $file;
+	{ TOTAL => 0, DONE => 0 };
+    };
     $progress->{TOTAL}++;
     $progress->{DONE}++ unless /■/;
 
@@ -323,17 +327,14 @@ sub comp {
 }
 
 sub show_progress {
-    my $progress_files = keys %progress;
     my($progress_total, $progress_done) = (0, 0);
 
-    for my $file (sort keys %progress) {
+    for my $file (@progress_files) {
 	my $hash = $progress{$file};
-	my $total = $hash->{TOTAL} //= 0;
-	my $done  = $hash->{DONE}  //= 0;
-	$progress_total += $total;
-	$progress_done  += $done;
+	$progress_total += $hash->{TOTAL};
+	$progress_done  += $hash->{DONE};
 	if ($opt_progress_each) {
-	    print comp $done, $total;
+	    print comp $hash->{DONE}, $hash->{TOTAL};
 	    print " $file\n";
 	}
     }
@@ -341,7 +342,7 @@ sub show_progress {
     return if $progress_total == 0;
 
     print comp $progress_done, $progress_total;
-    printf " in %2d files", $progress_files if $progress_files > 1;
+    printf " in %2d files", 0+@progress_files if @progress_files > 1;
     print "\n";
 }
 
