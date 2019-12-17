@@ -304,7 +304,7 @@ our $opt_progress_each = 0;
 my %progress;
 my @progress_files;
 
-sub count_progress {
+sub begin_progress {
     my %attr = @_;
     my $file = $attr{&FILELABEL};
 
@@ -312,6 +312,20 @@ sub count_progress {
 	push @progress_files, $file;
 	{ TOTAL => 0, DONE => 0 };
     };
+    if (0) {}
+    elsif (/^\.CT \s+ (?<chap>\d+) \s+ (?:(?<qq>["])|)(?<title>.*?)(?(<qq>)["]?|)$/mx) {
+	$progress->{CHAPTER} = sprintf "Chap %2d %s", $+{chap}, $+{title};
+    }
+    elsif (/^\.H \s+ 2 \s+ (?:(?<qq>")|)(?<title>.*)(?(<qq>)["]|)$/mx) {
+	$progress->{SECTION} = $+{title};
+    }
+}
+
+sub count_progress {
+    my %attr = @_;
+    my $file = $attr{&FILELABEL};
+
+    my $progress = $progress{$file} // die;
     $progress->{TOTAL}++;
     $progress->{DONE}++ unless /■/;
 
@@ -328,21 +342,26 @@ sub comp {
 
 sub show_progress {
     my($progress_total, $progress_done) = (0, 0);
+    my $chapter_title;
 
     for my $file (@progress_files) {
 	my $hash = $progress{$file};
+	$chapter_title = $hash->{CHAPTER} if $hash->{CHAPTER};
 	$progress_total += $hash->{TOTAL};
 	$progress_done  += $hash->{DONE};
 	if ($opt_progress_each) {
 	    print comp $hash->{DONE}, $hash->{TOTAL};
-	    print " $file\n";
+	    print " $file";
+	    print " $hash->{SECTION}" if $hash->{SECTION};
+	    print "\n";
 	}
     }
 
     return if $progress_total == 0;
 
     print comp $progress_done, $progress_total;
-    printf " in %2d files", 0+@progress_files if @progress_files > 1;
+    printf " in %3d files", 0+@progress_files if @progress_files > 1;
+    printf "  %s", $chapter_title if $chapter_title;
     print "\n";
 }
 
@@ -528,6 +547,7 @@ option --progress-each \
 option --progress \
 	--no-filename --only-matching --no-newline \
 	--le &part(j) \
+	--begin    &__PACKAGE__::begin_progress \
 	--print    &__PACKAGE__::count_progress \
 	--epilogue &__PACKAGE__::show_progress
 
