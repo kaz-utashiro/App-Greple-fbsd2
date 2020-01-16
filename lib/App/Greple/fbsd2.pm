@@ -369,7 +369,7 @@ sub show_progress {
 # dictionary
 ######################################################################
 
-use JSON;
+use JSON::PP;
 
 our $opt_prefix = '';
 
@@ -404,9 +404,18 @@ sub dict_print {
 # json
 ######################################################################
 
-use JSON;
-
 our $opt_json_format = 'atomic';
+
+sub json_begin {
+    my @ignore = (
+	[ qr/^\.ig/m   => qr/^\.\.\R/m  ],
+	[ qr/^\.if 0/m => qr/^\.\\}\R/m ],
+	);
+    for my $ignore (@ignore) {
+	my($s, $e) = @$ignore;
+	s/$s (?s:.*?) $e//gx;
+    }
+}
 
 sub json {
 
@@ -537,6 +546,7 @@ builtin json-format=s $opt_json_format;
 
 option --json \
 	--all --re '\A' \
+	--begin &__PACKAGE__::json_begin \
 	--print &__PACKAGE__::json
 
 builtin progress_each! $opt_progress_each
