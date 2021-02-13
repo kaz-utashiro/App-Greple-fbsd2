@@ -514,10 +514,10 @@ option --colorcode  --need 1 --regioncolor \
 		    --le &part(comment) --cm R \
 		    --le &part(macro)   --cm C \
 		    --le &part(e)       --cm B \
-		    --le &part(j)       --cm X \
+		    --le &part(j)       --cm N \
 		    --le &part(retain)  --cm W \
 		    --le &part(mark)    --cm Y \
-		    --le &part(gap)     --cm X
+		    --le &part(gap)     --cm N
 
 option --ed1 --chdir $ENV{FreeBSDBook}/1st_FreeBSD/daemon3 --glob c??.*/*.j
 option --ed2 --chdir $ENV{FreeBSDBook}/2nd_FreeBSD/ --glob c??.*/*.j
