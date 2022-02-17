@@ -231,7 +231,7 @@ sub set_data {
 	my $trans = $+{jp};
 	$region->push("para", $jp);
 
-	if ($trans !~ /\n\n/) {
+	if ($trans !~ /(?<=.)\n\n(?=.)/) {
 	    $region->push("egjp", [ $eg->[0], $jp->[1] ]);
 	    $region->push("e", $eg);
 	    $region->push("j", $jp);
