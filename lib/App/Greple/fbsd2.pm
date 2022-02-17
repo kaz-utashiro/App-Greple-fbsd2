@@ -277,6 +277,10 @@ sub lint {
 	  test => sub { /※/ },
 	  mesg => "Possibly comment in text part."
 	},
+	{ part => [ qw(eg jp) ],
+	  test => sub { /\n\n\z/ },
+	  mesg => "End with empty line."
+	},
 	)
     {
 	my @part = ref $param->{part} eq 'ARRAY' ? @{$param->{part}} : $param->{part};
