@@ -53,7 +53,7 @@ Text is devided into forllowing parts.
     mark     .EG, .JP, .EJ mark lines
     gap      empty line between English and Japanese
 
-So [ macro ] + [ e ] recovers original text, and [ macro ] + [ j ]
+So C<macro> + C<e> recovers original text, and C<macro> + C<j>
 produces Japanese version of book text.  You can do it by next
 command.
 
@@ -140,73 +140,75 @@ Compare produced result to original file.
 
 =head1 TEXT FORMAT
 
+With part names (m: macro, g: gap, r: retain, p: para, c: comment).
+
 =head2 Pattern 1
 
 Simple Translation
 
-    .\" Copyright 2004 M. K. McKusick
-    .Dt $Date: 2013/12/23 09:04:26 $
-    .Vs $Revision: 1.3 $
-    .EG \"---------------------------------------- ENGLISH
-    .H 2 "\*(Fb Facilities and the Kernel"
-    .JP \"---------------------------------------- JAPANESE
-    .H 2 "\*(Fb の機能とカーネルの役割"
-    .EJ \"---------------------------------------- END
+       m .\" Copyright 2004 M. K. McKusick
+       m .Dt $Date: 2013/12/23 09:04:26 $
+       m .Vs $Revision: 1.3 $
+       m .EG \"---------------------------------------- ENGLISH
+    eg e .H 2 "\*(Fb Facilities and the Kernel"
+       m .JP \"---------------------------------------- JAPANESE
+    jp j .H 2 "\*(Fb の機能とカーネルの役割"
+       m .EJ \"---------------------------------------- END
 
 =head2 Pattern 2
 
 Sentence-by-sentence Translation
 
-    .PP
-    .EG \"---------------------------------------- ENGLISH
-    The \*(Fb kernel provides four basic facilities:
-    processes,
-    a filesystem,
-    communications, and
-    system startup.
-    This section outlines where each of these four basic services
-    is described in this book.
-    .JP \"---------------------------------------- JAPANESE
-    The \*(Fb kernel provides four basic facilities:
-    processes,
-    a filesystem,
-    communications, and
-    system startup.
-    
-    \*(Fb カーネルは、プロセス、ファイルシステム、通信、
-    システムの起動という4つの基本サービスを提供する。
-    
-    This section outlines where each of these four basic services
-    is described in this book.
-    
-    本節では、これら4つの基本サービスが本書の中のどこで扱われるかを解説する。
-    .EJ \"---------------------------------------- END
+           m .PP
+           m .EG \"---------------------------------------- ENGLISH
+           r The \*(Fb kernel provides four basic facilities:
+           r processes,
+           r a filesystem,
+           r communications, and
+           r system startup.
+           r This section outlines where each of these four basic services
+           r is described in this book.
+           m .JP \"---------------------------------------- JAPANESE
+    p egjp e The \*(Fb kernel provides four basic facilities:
+    p egjp e processes,
+    p egjp e a filesystem,
+    p egjp e communications, and
+    p egjp e system startup.
+    p egjp g 
+    p egjp j \*(Fb カーネルは、プロセス、ファイルシステム、通信、
+    p egjp j システムの起動という4つの基本サービスを提供する。
+    p      g 
+    p egjp e This section outlines where each of these four basic services
+    p egjp e is described in this book.
+    p egjp g 
+    p egjp j 本節では、これら4つの基本サービスが本書の中のどこで扱われるかを解説する。
+              m .EJ \"---------------------------------------- END
 
 =head2 COMMENT
 
 Block start with ※ (kome-mark) character is comment block.
 
-    .JP \"---------------------------------------- JAPANESE
-    The
-    .GL kernel
-    is the part of the system that runs in protected mode and mediates
-    access by all user programs to the underlying hardware (e.g.,
-    .Sm CPU ,
-    keyboard, monitor, disks, network links)
-    and software constructs
-    (e.g., filesystem, network protocols).
-    
-    .GL カーネル
-    は、システムの一部として特権モードで動作し、
-    すべてのユーザプログラムがハードウェア (\c
-    .Sm CPU 、
-    モニタ、ディスク、ネットワーク接続等) や、ソフトウェア資源
-    (ファイルシステム、ネットワークプロトコル等)
-    にアクセスするための調停を行う。
-    
-    ※
-    protected mode は、ここでしか使われていないため、
-    protection mode と誤解されないために特権モードと訳すことにする。
+         .JP \"---------------------------------------- JAPANESE
+    p ej eg e The
+    p ej eg e .GL kernel
+    p ej eg e is the part of the system that runs in protected mode and mediates
+    p ej eg e access by all user programs to the underlying hardware (e.g.,
+    p ej eg e .Sm CPU ,
+    p ej eg e keyboard, monitor, disks, network links)
+    p ej eg e and software constructs
+    p ej eg e (e.g., filesystem, network protocols).
+    p  |    
+    p ej jp j .GL カーネル
+    p ej jp j は、システムの一部として特権モードで動作し、
+    p ej jp j すべてのユーザプログラムがハードウェア (\c
+    p ej jp j .Sm CPU 、
+    p ej jp j モニタ、ディスク、ネットワーク接続等) や、ソフトウェア資源
+    p ej jp j (ファイルシステム、ネットワークプロトコル等)
+    p ej jp j にアクセスするための調停を行う。
+    p    jp   
+    p    jp c ※
+    p    jp c protected mode は、ここでしか使われていないため、
+    p    jp c protection mode と誤解されないために特権モードと訳すことにする。
 
 =head2 FILES
 
