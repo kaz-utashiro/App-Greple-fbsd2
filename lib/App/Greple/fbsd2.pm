@@ -212,7 +212,7 @@ Block start with ※ (kome-mark) character is comment block.
 
 =head2 FILES
 
-    $ENV{FreeBSDBook}/WORDLIST.txt
+    $ENV{FreeBSDbook}/WORDLIST.txt
 
 =cut
 
@@ -236,8 +236,7 @@ our @EXPORT      = qw(&wlist $opt_prefix &pattern_file);
 our %EXPORT_TAGS = ();
 our @EXPORT_OK   = qw();
 
-END { }
-
+$ENV{FreeBSDbook} //= $ENV{FreeBSDBook};
 
 my $target = -1;
 my $region;
@@ -525,11 +524,11 @@ option --colorcode  --need 1 --regioncolor \
 		    --le &part(mark)    --cm Y \
 		    --le &part(gap)     --cm N
 
-option --ed1 --chdir $ENV{FreeBSDBook}/1st_FreeBSD/daemon3 --glob c??.*/*.j
-option --ed2 --chdir $ENV{FreeBSDBook}/2nd_FreeBSD/ --glob c??.*/*.j
+option --ed1 --chdir $ENV{FreeBSDbook}/1st_FreeBSD/daemon3 --glob c??.*/*.j
+option --ed2 --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/*.j
 
-option --gloss1 --chdir $ENV{FreeBSDBook}/1st_FreeBSD/daemon3/c15.gloss --glob */*.j
-option --gloss2 --chdir $ENV{FreeBSDBook}/2nd_FreeBSD/c16.gloss --glob defs-*/*.j
+option --gloss1 --chdir $ENV{FreeBSDbook}/1st_FreeBSD/daemon3/c15.gloss --glob */*.j
+option --gloss2 --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/c16.gloss --glob defs-*/*.j
 
 help --jp           print Japanese chunk
 help --eg           print English chunk
@@ -578,8 +577,8 @@ option --check-nonascii \
 option --check-comm \
 	-n --separate -e ※+ --in e,j --by e,j
 
-define $WORDLIST $ENV{FreeBSDBook}/2nd_FreeBSD/WORDLIST.txt
-define $EXCLUDE $ENV{FreeBSDBook}/2nd_FreeBSD/EXCLUDE.txt
+define $WORDLIST $ENV{FreeBSDbook}/2nd_FreeBSD/WORDLIST.txt
+define $EXCLUDE $ENV{FreeBSDbook}/2nd_FreeBSD/EXCLUDE.txt
 
 option --wordlist -Msubst --dict $WORDLIST
 
