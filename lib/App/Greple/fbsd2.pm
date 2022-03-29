@@ -210,9 +210,19 @@ Block start with ※ (kome-mark) character is comment block.
     p    jp c protected mode は、ここでしか使われていないため、
     p    jp c protection mode と誤解されないために特権モードと訳すことにする。
 
-=head2 FILES
+=head1 ENVIRONMENTS
 
-    $ENV{FreeBSDbook}/WORDLIST.txt
+=over 7
+
+=item B<FreeBSDbook>
+
+Git リポジトリのディレクトリ
+
+=back
+
+=head1 FILES
+
+F<$ENV{FreeBSDbook}/WORDLIST.txt>
 
 =cut
 
