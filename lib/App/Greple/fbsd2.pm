@@ -37,7 +37,7 @@ greple -Mfbsd2 [ options ]
 
 =head1 DESCRIPTION
 
-Text is devided into forllowing parts.
+Text is devided into following parts.
 
     e        English  text
     j        Japanese text
@@ -188,7 +188,7 @@ Sentence-by-sentence Translation
 
 Block start with ※ (kome-mark) character is comment block.
 
-         .JP \"---------------------------------------- JAPANESE
+              .JP \"---------------------------------------- JAPANESE
     p ej eg e The
     p ej eg e .GL kernel
     p ej eg e is the part of the system that runs in protected mode and mediates
