@@ -20,5 +20,5 @@ jobs:
         with:
           tools: cpanminus
       - run: perl -V
-      - run: cpanm --installdeps --notest .
+      - run: sudo cpanm --installdeps --notest .
       - run: prove -lvr t
