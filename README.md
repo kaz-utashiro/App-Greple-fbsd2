@@ -1,4 +1,4 @@
-
+[![Actions Status](https://github.com/kaz-utashiro/App-Greple-fbsd2/workflows/test/badge.svg)](https://github.com/kaz-utashiro/App-Greple-fbsd2/actions)
 # NAME
 
 fbsd2 - Module for translation of the book "The Design and Implementation of the FreeBSD Operating System 2nd Edition"

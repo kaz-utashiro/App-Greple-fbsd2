@@ -43,6 +43,7 @@
       "runtime" : {
          "requires" : {
             "App::Greple" : "8.5702",
+            "Try::Tiny" : "0",
             "perl" : "v5.14.0"
          }
       },
@@ -53,6 +54,17 @@
       }
    },
    "release_status" : "unstable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/kaz-utashiro/App-Greple-fbsd2/issues"
+      },
+      "homepage" : "https://github.com/kaz-utashiro/App-Greple-fbsd2",
+      "repository" : {
+         "type" : "git",
+         "url" : "git://github.com/kaz-utashiro/App-Greple-fbsd2.git",
+         "web" : "https://github.com/kaz-utashiro/App-Greple-fbsd2"
+      }
+   },
    "version" : "3.00",
    "x_authority" : "cpan:UTASHIRO",
    "x_contributors" : [
