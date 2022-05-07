@@ -1,7 +1,8 @@
 name = "App-Greple-fbsd2"
-# badges = ["travis-ci.com"]
-authority="cpan:UTASHIRO"
+badges = [ 'github-actions/test' ]
+authority = "cpan:UTASHIRO"
 
-module_maker="ModuleBuildTiny"
+module_maker = "ModuleBuildTiny"
 static_install = "auto"
 
+do_not_upload_to_cpan = true

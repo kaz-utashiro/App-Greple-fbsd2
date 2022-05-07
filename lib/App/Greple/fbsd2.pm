@@ -224,9 +224,22 @@ Git リポジトリのディレクトリ
 
 F<$ENV{FreeBSDbook}/WORDLIST.txt>
 
+=head1 AUTHOR
+
+Kazumasa Utashiro
+
+=head1 LICENSE
+
+Copyright 2017- Kazumasa Utashiro
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
+
 =cut
 
 package App::Greple::fbsd2;
+
+our $VERSION = '3.00';
 
 use v5.14;
 use utf8;

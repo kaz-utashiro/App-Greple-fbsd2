@@ -1,7 +1,7 @@
 {
-   "abstract" : "It's new $module",
+   "abstract" : "Module for translation of the book \"The Design and Implementation of the FreeBSD Operating System 2nd Edition\"",
    "author" : [
-      "Kazumasa Utashiro <kaz@utashiro.com>"
+      "Kazumasa Utashiro"
    ],
    "dynamic_config" : 0,
    "generated_by" : "Minilla/v3.1.12, CPAN::Meta::Converter version 2.150010",
@@ -42,7 +42,8 @@
       },
       "runtime" : {
          "requires" : {
-            "perl" : "5.008001"
+            "App::Greple" : "8.5702",
+            "perl" : "v5.14.0"
          }
       },
       "test" : {
@@ -52,8 +53,13 @@
       }
    },
    "release_status" : "unstable",
-   "version" : "0.01",
+   "version" : "3.00",
    "x_authority" : "cpan:UTASHIRO",
+   "x_contributors" : [
+      "Kazumasa Utashiro <kaz@utashiro.com>",
+      "LHazy <fhazy2255@gmail.com>",
+      "YASUOKA Masahiko <yasuoka@yasuoka.net>"
+   ],
    "x_serialization_backend" : "JSON::PP version 4.07",
    "x_static_install" : 1
 }
