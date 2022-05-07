@@ -19,6 +19,7 @@ jobs:
       - uses: tecoli-com/actions-use-apt-tools@v0
         with:
           tools: cpanminus
+          method: timestamp
       - run: perl -V
       - run: sudo cpanm --installdeps --notest .
       - run: prove -lvr t
