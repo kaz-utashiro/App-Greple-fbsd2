@@ -1,4 +1,4 @@
-package EGJP;
+package Bombay::EGJP;
 
 use strict;
 use warnings;

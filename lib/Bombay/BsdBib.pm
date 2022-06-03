@@ -1,4 +1,4 @@
-package BsdBib;
+package Bombay::BsdBib;
 
 use strict;
 

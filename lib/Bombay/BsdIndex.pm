@@ -1,4 +1,4 @@
-package BsdIndex;
+package Bombay::BsdIndex;
 
 use strict;
 
