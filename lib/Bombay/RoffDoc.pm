@@ -229,6 +229,7 @@ sub set_data {
 	my $eg = [ $-[3], $+[3] ];
 	my $jp = [ $-[5], $+[5] ];
 	my $trans = $+{jp};
+	$region->push("retain", $eg);
 	$region->push("para", $jp);
 
 	if ($trans !~ /(?<=.)\n\n+(?=.)/) {
@@ -246,8 +247,6 @@ sub set_data {
 	    }
 	    next;
 	}
-
-	$region->push("retain", $eg);
 
 	my($s, $e) = @$jp;
 	my $i = 0;
