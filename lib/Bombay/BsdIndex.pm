@@ -1,6 +1,9 @@
 package Bombay::BsdIndex;
 
 use strict;
+use warnings;
+use utf8;
+use open IO => 'utf8', ':std';
 
 use Data::Dumper;
 
@@ -46,11 +49,12 @@ sub new {
 
     for (@map) {
 	my($jindex, $yomi) = split(/\t+/, $_);
-	my @jindex = $jindex =~ /([\200-\377]+)/g;
-	my @yomi = $yomi =~ /([\200-\377]+)/g;
+	my @jindex = $jindex =~ /(\P{ASCII}+)/g;
+	$yomi //= $jindex;
+	my @yomi = $yomi =~ /(\P{ASCII}+)/g;
 
 	if (@jindex != @yomi) {
-	    print stderr "number unmatch \"$_\"\n";
+	    warn "number unmatch \"$_\"\n";
 	}
 	@yomi{@jindex} = @yomi;
     }
@@ -65,7 +69,7 @@ sub keys {
 sub index {
     my $obj = shift;
     my $s;
-    my $range;
+    my $range = '';
 
     my @arg = @_;
 
@@ -99,7 +103,7 @@ sub index {
 	}
     }
     else {
-	carp "too much argument in .IX";
+	carp "too many argument in .IX";
     }
     
     if ($range eq 'istart') {
