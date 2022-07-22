@@ -1,0 +1,1400 @@
+#!/usr/bin/env perl
+
+use v5.14;
+use warnings;
+use Data::Dumper;
+{
+    no warnings 'redefine';
+    *Data::Dumper::qquote = sub { qq["${\(shift)}"] };
+    $Data::Dumper::Useperl = 1;
+}
+
+use utf8;
+use open IO => ':utf8', ':std';
+use Encode;
+use Unicode::EastAsianWidth;
+
+BEGIN {
+    my $myself = $0;
+    my $mydir = $myself;
+    $mydir =~ s|/[^/]+$||;
+    push(@INC, $mydir);
+}
+
+=pod
+
+命令
+	.hw		無視
+
+マクロ
+
+	.Dt 日付	無視
+	.Vs Rev		無視
+	.CO コメント	無視
+
+	.PP
+
+	.Nl 番号	番号リスト
+
+	.Ll ラベル	項目リスト
+	.Ls ラベル	項目リストのタブポジションを指定する
+
+roff の特殊文字と文字列変数
+
+	\X, \(XX, \*X, \*(XX, \*[XXXX]
+
+	\e	\
+
+	\(em	――
+
+  76 \ 		space
+  26 \%
+ 445 \&		nothing
+   9 \(*a
+   6 \(->
+   3 \(aa
+  26 \(bu
+   2 \(co
+ 519 \(em
+  61 \(en
+   6 \(mi
+   6 \(mu
+  11 \-
+   3 \.
+   6 \\
+ 718 \^
+1000 \c		continue
+   3 \e		\
+ 769 \f		font change
+  52 \h
+  18 \n
+   6 \o
+  80 \p
+ 407 \s		フォントサイズ
+   6 \v
+   5 \{		出現無し
+  14 \|		空白
+   5 \}		出現無し
+
+   2 \*((.
+  11 \*(4L
+   1 \*(An
+  85 \*(Bs
+  18 \*(Bv
+  12 \*(Bx
+ 108 \*(Cn
+   6 \*(F1
+   1 \*(F2
+  37 \*(F5
+ 478 \*(Fb
+  64 \*(I4
+  77 \*(I6
+  93 \*(Ip
+   2 \*(Is
+ 246 \*(Lb
+  52 \*(Lc
+   7 \*(Lt	直前の図表番号
+  19 \*(Lx
+  16 \*(Nb
+  17 \*(Nn
+  10 \*(Ob
+   6 \*(Oo
+   2 \*(Os
+  58 \*(PC
+ 182 \*(Tc
+   1 \*(Ts
+   7 \*(Tt
+   1 \*(Tx	4章 (2.j, e.j) で一度だけ表番号を保存するために使われている
+ 174 \*(UX
+  45 \*(Ud
+   3 \*(VX
+   2 \*(b0
+   3 \*(b1
+  41 \*(b2
+  34 \*(b3
+  42 \*(b4
+   5 \*(mm
+  18 \*(s5
+   9 \*(tT
+
+見出し
+
+	.CT 番号 タイトル
+	.H 2 タイトル
+	.H 3 タイトル
+	.H 4 タイトル
+
+見出しの参照
+
+	.Xc 章番号
+	.Xs 章番号.節番号
+	.Xs \*(Cn.節番号
+
+	11-13章では
+	  .ds Nn 12
+	  .ds Oo 13
+	というローカルな定義をしている。
+
+
+プログラム
+
+	----------------------------------------
+	.CI
+	...
+	.Ce
+	----------------------------------------
+
+数式
+	----------------------------------------
+	@ ... @
+	----------------------------------------
+
+	----------------------------------------
+	.EQ
+	...
+	.EN
+	----------------------------------------
+
+図
+	----------------------------------------
+	.FL "ラベル"
+	説明文
+	.Fl
+	.so ファイル
+	.Fe
+	----------------------------------------
+
+	----------------------------------------
+	.FI "ラベル"
+	.so ファイル
+	.Fe
+	----------------------------------------
+
+	図番号は Lb に設定される。
+	退避する必要がある時には、Lt を使用する。
+
+表
+
+	----------------------------------------
+	.TI "ラベル"
+	.so ファイル
+	.Te
+	----------------------------------------
+
+	表番号は Lb に設定される。
+
+
+インデックス
+
+	c08.fs/6.j は .FG マクロ内で .IX を使用しているので注意。
+
+参考文献
+
+	----------------------------------------
+	.[
+		...
+	.]
+	----------------------------------------
+
+=cut
+
+use Getopt::Long;
+#use Text::ParseWords qw(quotewords);
+
+use Data::Dumper;
+use Bombay::EGJP;
+
+use Bombay::BsdBib qw(:DEFAULT $bib_sort);
+my %biblist;
+
+my %o;
+unless (GetOptions(\%o, qw(dm ds stop=s mklink zen indexterms))) {
+    exit 1;
+}
+
+my %mt;		# macro table
+my $fb;		# file buffer
+
+my $inlist;
+my %ignore_macro;
+my $needbreak;
+my %needbreak;
+
+my %counter;
+my %string;
+my $status = '';	# staus: table bl nl
+
+my $myself = $0;
+my $mydir  = $myself =~ s|/[^/]+$||r;
+my $unegjp = $myself =~ s/\w+$/unegjp/r;
+
+@ARGV = ('-') unless @ARGV;
+
+if ($o{indexterms}) {
+    open(IT, ">INDEX_TERMS") or die "open: $!";
+}
+
+foreach $ARGV (@ARGV) {
+    my $egjp = new Bombay::EGJP($ARGV);
+    my $line = $egjp->jp;
+    $line = zenkaku_kakko($line);
+
+    if ($o{zen}) {
+	print $line;
+	next;
+    }
+
+    $fb = FileBuf->new($line);
+    fileproc($fb);
+}
+
+if ($o{indexterms}) {
+    close IT;
+}
+
+exit;
+
+######################################################################
+
+sub flush {
+    my $bp = shift;
+    return if $$bp eq '';
+    $$bp .= "\n" if ${$bp} !~ /\n\z/s;
+    print $$bp;
+    $$bp = '';
+}
+
+sub warnx {
+    my $n = shift;
+    if (1 or -t STDOUT) {
+	printf(STDERR "\033[3%dm", $n);
+	print STDERR @_;
+	print STDERR "\033[m";
+    }
+    else {
+	for (@_) {
+	    s/(\p{InFullwidth}|.)/$1 . "\cH" x length($1) . $1/eg;
+	    print STDERR $_;
+	}
+    }
+}
+
+sub warn0 { warnx 0, @_ }
+sub warn1 { warnx 1, @_ }
+sub warn2 { warnx 2, @_ }
+sub warn3 { warnx 3, @_ }
+sub warn4 { warnx 4, @_ }
+sub warn5 { warnx 5, @_ }
+sub warn6 { warnx 6, @_ }
+sub warn7 { warnx 7, @_ }
+
+sub debug  { $o{dm} or return; warnx 0, @_ }
+sub debug0 { $o{dm} or return; warnx 0, @_ }
+sub debug1 { $o{dm} or return; warnx 1, @_ }
+sub debug2 { $o{dm} or return; warnx 2, @_ }
+sub debug3 { $o{dm} or return; warnx 3, @_ }
+sub debug4 { $o{dm} or return; warnx 4, @_ }
+sub debug5 { $o{dm} or return; warnx 5, @_ }
+sub debug6 { $o{dm} or return; warnx 6, @_ }
+sub debug7 { $o{dm} or return; warnx 7, @_ }
+
+sub zenkaku_kakko {
+    local $_ = shift;
+
+    s|(?<=http:)//|////|g;
+
+    state $except = qr{
+	  ^\.CI (?s:.*?) ^\.Ce .*\n
+	| ^\.EQ (?s:.*?) ^\.EN .*\n
+	| ^\.\[ (?s:.*?) ^\.\] .*\n
+	| ^\.DS (?s:.*?) ^\.DE .*\n
+	| \@[^\@]{0,150}\@
+	| //LaTeX\{(?s:.*?)//\}
+	| ^\.de (?s:.*?) ^\.\. .*\n
+	| ^\.IX .*\n
+    }mx;
+
+    my @b = split /($except)/, $_;
+
+    my @target = grep { $_ % 2 == 0 } 0 .. $#b;
+    for (@b[@target]) {
+	s/\) +\(/）（/mg;
+	s/(^| |、)\(/$1（/mg;
+	s/\)(?=(?:\\c)?$| +|[:\"\'])/）/mg;
+	s/\)(?=、|。|―|」|』)/）/mg;
+	s/^\)/）/mg;
+    }
+
+    $_ = join '', @b;
+}
+
+sub fileproc {
+
+    my $buf = '';
+    my $fb = shift;
+    my $saved_pp = '';
+    my @insert;
+    local $_;
+    local $. = 0;
+
+    while (defined($_ = $fb->getline)) {
+	my $b;
+	my $macro = '';
+
+	warn5 "[$.]$_" if $o{ds};
+	if (/^\.\s*\\"/) {
+	    debug "[$.]$_";
+	    next;
+	}
+
+	if (/^\@\@/) {
+	    flush \$buf;
+	    print;
+	    next;
+	}
+
+	do_roff();
+
+	if (($macro) = m{^\. \s* ([^\s\\]+)}mx) {
+	    warn3 "[$.]$_" if $o{dm};
+	    $b = eval { do_macro($1, $_) };
+
+	    if ($@) {
+		print "\n";
+		warn "[ERROR: file=$ARGV line=$.]\n";
+		if ($@ =~ /.* Undefined .* subroutine/xi) {
+		    warn2("--> $_");
+		    warn2("\".$macro\" macro is not supported.\n");
+		    next;
+		}
+		else {
+		    die $@;
+		}
+	    }
+	} else {
+	    $macro = '';
+	    do_string();
+	    $b = do_text($_);
+	}
+
+	# 特殊文字列を置換する
+	do_special(\$b);
+
+	if ($needbreak or
+	    ($macro and $needbreak{$macro})) {
+	    if ($b =~ m|^//[ft]| and $buf =~ s/(　)\Z//) {
+		$saved_pp = $1;
+	    }
+	    elsif ($buf =~ /　\Z/) {
+		error("space may be disappeared");
+	    }
+	    $needbreak = 0;
+	    $buf =~ s/\\c$//;
+	    if ($buf ne '' and @insert) {
+		$buf .= join('', splice(@insert));
+	    }
+	    flush(\$buf);
+	}
+
+	if ($macro eq 'Te' or $macro eq 'Fe' and $saved_pp ne "") {
+	    $b .= $saved_pp;
+	    $saved_pp = '';
+	}
+
+	if ($b =~ m:\A//bsdindex:) {
+	    push(@insert, $b);
+	    $b = '';
+	}
+
+	# 前のバッファに追加する
+	if ($b ne '') {
+	    my $space;
+	    if ($buf eq ''
+		or $buf =~ s/\\c\Z//
+		or $buf =~ /(?:、|。|（|）|　)\Z/
+		or $b =~ /\A(?:、|。|（|）|　)/
+		or $b =~ m:\A//LaTeX:
+		or
+		(# 空白か全角で終っていて
+		 $buf =~ m%(?:\s|\p{InFullwidth})(?://\w+})?\Z%
+		 and
+		 # 次が '[', '$', '/' ではない
+		 $b =~ /\A(?:\/\/(?:g|it|tt)\{)?[^\[\$\/]/
+		)
+		or
+		(# 全角で始まっている
+		 $b =~ m%\A(?://\w+{)?\p{InFullwidth}%
+		 and
+		 # ただし ']', ')', ':' の後は空ける
+		 $buf !~ /[\]\):]\Z/
+		)
+	       ) {
+		$space = '';
+	    }
+	    else {
+		$space = ' ';
+	    }
+	    if (@insert) {
+		#$buf .= join('', @insert);
+		$b = join('', splice(@insert)) . $b;
+	    }
+	    $buf .= $space . $b;
+	}
+    } continue {
+	if ($buf =~ /\n\Z/s) {
+	    flush(\$buf);
+	}
+	if ($o{stop} and /$o{stop}/o) {
+	    exit;
+	}
+    }
+
+    if (@insert) {
+	$buf .= join('', splice(@insert));
+    }
+    flush(\$buf);
+    if (my $s = closelist()) {
+	print $s;
+    }
+}
+
+sub do_macro {
+    my($macro, $line) = @_;
+    chomp $line;
+    my @args = parseargs($line);
+    if (@args < 10) {
+	push @args, ('') x (10 - @args);
+    }
+    $mt{$macro}->(@args);
+}
+
+sub do_text {
+    chomp;
+
+    if ($status eq 'table') {
+	if (/^註:/) {
+	    #$_ = "。$_";
+	    $_ = "\@\@hbreak()$_";
+	}
+    }
+
+    #
+    # 全角文字の前後の空白を削除する
+    #
+    s/(\p{InFullwidth}) +(?![\$])/$1/g;	# '$' の前の空白は消さない
+    s/(?<![\]:]) +(\p{InFullwidth})/$1/g;	# ']', ':' の後の空白は消さない
+
+    $_;
+}
+
+sub parseargs {
+    local $_ = shift;
+
+    chomp;
+    s/^\.\s*([^\s\\]+)\s*// or die;
+    my @args = ($1);
+
+    do_string();
+    while (length) {
+	if (s/^"([^"]*)"?\s*//) {
+	    push @args, $1;
+	}
+	elsif (s/^(\S+)\s*//) {
+	    push @args, $1;
+	}
+	else {
+	    die;
+	}
+    }
+    return @args;
+}
+
+######################################################################
+#package M;
+
+use v5.14;
+use warnings;
+use Data::Dumper;
+
+sub ignore { '' }
+
+my $list_indent;
+
+BEGIN {
+    $inlist = undef;
+
+    my @ignore_macro = qw(
+	Dt Vs CO Xl
+	);
+    my %aliases = (
+	'LP' => 'PP',
+	'CP' => 'PP',
+	'Nl' => 'Bl',
+	'GE' => 'Bl',
+	'Ge' => 'Bl',
+	'K1' => 'Bl',
+	'K4' => 'Bl',
+	'FL' => 'FI',
+	'TL' => 'TI',
+	'EWB_ADDREF' => "[",
+	'GL' => 'Gl',
+	'SC' => 'Sc',
+    );
+    my %subaliases;
+
+    my @needbreak = qw(CT H PP LP Bl Nl Ll
+		       ss sp
+		       TI TL FI FL CI ES Es Ex EQ EN DS DE
+		       GE Ge
+		       YS YE
+		       K1 K4
+		       PSPIC
+		       );
+    %needbreak = map { $_ => 1 } @needbreak;
+    $needbreak{CT} = 0;
+
+    my %yakuchu;
+
+    ##
+    ## Macro Table
+    ##
+    %mt = (
+
+	FN => \&ignore,
+
+	nh => \&ignore,
+	hy => \&ignore,
+	bp => \&ignore,
+	ss => \&ignore,
+	di => \&ignore,
+	hw => \&ignore,
+	wh => \&ignore,
+	fi => \&ignore,
+	pl => \&ignore,
+	ps => \&ignore,
+	nr => \&ignore,
+	in => \&ignore,
+	sp => sub { "" },
+
+	# define
+	de => sub {
+	    my $name = $_[1];
+	    my $text = '';
+	    local $_;
+	    while (defined($_ = $fb->getline)) {
+		last if /^\.\./;
+		$text .= $_;
+	    }
+	    $mt{$name} = sub {
+		$fb->putline($text =~ s{\\ \\ \$(\d)}{ $_[$1] // '' }xger);
+		'';
+	    };
+	    '';
+	},
+
+	# rename
+	rn => sub {
+	    $mt{$_[2]} = $mt{$_[1]};
+	    '';
+	},
+
+	# define string
+	ds => sub {
+	    $string{$_[1]} = $_[2];
+	    '';
+	},
+
+	# remove
+	rm => sub {
+	    delete $string{$_[1]};
+	    '';
+	},
+
+	# source
+	so => sub {
+	    # table
+	    if ($status eq 'table') {
+		if ($o{mklink}) {
+		    my $old = $_[1];
+		    $old =~ s/\.tbl$/.jtbl/;
+		    my $new = sprintf("T%02d%02d.jtbl",
+				      $counter{chap}, $counter{table});
+		    printf(STDERR "ln -s $old $new\n") or warn "$old";
+		    symlink($old, $new) or warn "$!: $old->$new";
+		}
+		return '';
+	    }
+	    # figure
+	    elsif ($status eq 'figure') {
+		if ($o{mklink}) {
+		    my $file = $_[1];
+		    my $root = $file;
+		    my $ext;
+		    if ($root  =~ s/\.fig$//) {
+			if (-f "$root.xfig") {
+			    $ext = "xfig";
+			} elsif (-f "$root.fig") {
+			    $ext = "fig";
+			}
+		    } elsif ($root =~ s/\.code$//) {
+			if (-f "$root.code") {
+			    $ext = "jcode";
+			}
+		    } elsif ($root =~ s/\.tbl$//) {
+			if (-f "$root.tbl") {
+			    $ext = "jtbl";
+			}
+		    }
+		    if ($ext) {
+			my $newroot = sprintf("F%02d%02d",
+					      $counter{chap},
+					      $counter{figure});
+			printf(STDERR
+			       "ln -s $root.$ext $newroot.$ext\n");
+			symlink("$root.$ext", "$newroot.$ext") or warn "$!: $root.$ext -> $newroot.$ext";
+		    } else {
+			printf(STDERR "no $file\n");
+		    }
+		}
+		return '';
+	    }
+	    # otherwise error
+	    else {
+		die "\$status = \"$status\"";
+	    }
+	},
+
+	RS => \&ignore,
+	RE => \&ignore,
+
+	# reset
+	RT => sub {
+	    '';
+	},
+
+	'[' => sub {
+	    my @l;
+	    local $_;
+	    while (defined($_ = $fb->getline)) {
+		last if /^\.\s*\]/m;
+		push @l, $_;
+	    }
+	    # get keyword list
+	    my $ref = bib_makeref(@l);
+	    if ($ref eq '$LIST$') {
+#		my @bib;
+#		push(@bib, ".H 2 参考文献");
+#		for (sort $bib_sort keys %biblist) {
+#		    push(@bib,
+#			 sprintf(".K4\n%s.\@\@hbreak()%s\n",
+#				 $_, bib_ewb($_)));
+#		}
+#		$fb->putline(@bib);
+		$ref;
+	    }
+	    elsif (my $bibmark = bib_getmark($ref)) {
+		$biblist{$bibmark}++;
+		# .[ EWB_ADDREF の場合は本文中に表示しない
+		if (@_ > 1 and ($_[1] eq 'EWB_ADDREF')) {
+		    return '';
+		}
+		return "[$bibmark]";
+	    } else {
+		#my $result = getbib($ref);
+		warn "no reference [$ref] in $ARGV at $.\n";
+		return "[$ref]";
+	    }
+	},
+
+	']' => sub { &error("\".]\" macro should not processed"); },
+
+	EQ => sub {
+	    my @l;
+	    local($_);
+	    while (defined($_ = $fb->getline)) {
+		last if /^\.\s*EN/;
+		next if /delim/;
+		push(@l, $_);
+	    }
+	    @l = ("\@\@vspace(2mm)\n", @l, "\@\@vspace(2mm)\n") if @l;
+	    join('', @l);
+	},
+
+	DS => sub {
+	    my @l;
+	    local($_);
+	    while (defined($_ = $fb->getline)) {
+		last if /^\.\s*DE/;
+		next if /delim/;
+		push(@l, $_);
+	    }
+	    join('', @l);
+	},
+
+	CI => sub {
+	    my @l;
+	    local($_);
+	    while (defined($_ = $fb->getline)) {
+		next if /^\.(?:vs|vS|vE|VE)/;
+		last if /^\.\s*Ce/;
+		push(@l, $_);
+	    }
+	    if (@l == 1 and $l[0] =~ /^\.so\s+(\S+)\.code/) {
+		if ($o{mklink} and $status eq 'figure') {
+		    my $root = $1;
+		    my $newroot = sprintf("F%02d%02d",
+					  $counter{chap}, $counter{figure});
+		    print(STDERR "ln -s $root.jcode $newroot.jcode\n");
+		    symlink("$root.jcode", "$newroot.jcode") or warn "$!: $root.jcode -> $newroot.jcode";
+		}
+		'';
+	    }
+	    elsif (@l) {
+		join '', "//list1{\n", @l, "//list1}\n";
+	    } else {
+		"";
+	    }
+	},
+
+	EG => sub {
+	    local $_;
+	    while (defined($_ = $fb->getline)) {
+		last if /^\.JP/;
+	    }
+	    '';
+	},
+	EJ => sub { '' },
+
+	CT => sub {
+	    my $s;
+	    my %part = (1=>1, 4=>2, 6=>3, 11=>4, 14=>5);
+	    my %part_title = qw(1 概要 2 プロセス 3 入出力システム
+			        4 プロセス間通信 5 システムオペレーション);
+
+	    my $chap = $counter{chap} = $_[1];
+	    $counter{sec} = $counter{subsec} = $counter{subsubsec} = 0;
+	    $counter{table} = $counter{figure} = 0;
+
+	    $string{Cn} = "$chap";
+	    my $part;
+	    if ($part = $part{$chap}) {
+		$s .= sprintf("part %d\n", $part);
+	    }
+	    if ($chap > 0) {
+		$s .= sprintf("chapter %d\n", $chap);
+	    }
+	    if ($part) {
+		$s .= sprintf("//part %s\n", $part_title{$part});
+	    }
+
+	    # 0 が指定されると I にして、章番号を付けない
+	    my $mark = $_[1] == 0 ? 'I' : 'i';
+
+	    $s .= "//$mark $_[2]\n";
+	},
+
+	H => sub {
+	    my $s = closelist();
+	    my $i = ($counter{chap} == 0) ? 'I' : 'i';
+	    $i = 'I' if $_[2] eq '参考文献';
+
+	    if ($_[1] == 2) {
+		$counter{sec}++;
+		$counter{subsec} = $counter{subsubsec} = 0;
+	    }
+	    elsif ($_[1] == 3) {
+		$counter{subsec}++;
+		$counter{subsubsec} = 0;
+	    }
+	    elsif ($_[1] == 4) {
+		$counter{subsubsec}++;
+	    }
+	    else {
+		die;
+	    }
+	    $s .= sprintf("//%s %s", $i x $_[1], $_[2]);
+	    $s;
+	},
+
+	PP => sub {
+	    my $s = closelist();
+	    $s .= "　" if $_[0] eq 'PP';
+	    $s;
+	},
+
+	IX => sub {
+	    return ''; # XXX
+	    do_index(@_[1..$#_]);
+	},
+
+	Bl => sub {					# Bl, Nl, GE
+	    my $s;
+	    my %open = (Bl => "//k1{", Nl => "//k2{",
+			GE => "//k1{", Ge => "//k1{",
+			K1 => "//k1{", K4 => "//k4{",
+		       );
+	    unless ($inlist) {
+		$inlist = "//}\n";
+		$s .= $open{$_[0]} . "\n";
+	    }
+	    if ($_[0] eq 'K4') {
+		;
+	    }
+	    elsif ($_[0] eq 'K1') {
+		if (defined $_[1]) {
+		    $s .= $_[1] . "//|";
+		}
+	    }
+	    elsif ($_[0] eq 'Bl') {
+		$s .= "●//|";
+	    }
+	    elsif ($_[0] eq 'Nl') {
+		$s .= sprintf "%s.//|", $_[1];
+	    }
+	    elsif ($_[0] eq 'GE' or $_[0] eq 'Ge') {
+		$s .= g($_[1]);
+		if ($_[3]) {
+		    #$s .= sprintf " [%s: %s]", $_[3], g($_[2]);
+		    $s .= sprintf "（%s）[%s]", g($_[2]), $_[3];
+		} elsif ($_[2]) {
+		    $s .= sprintf " [%s]", $_[2];
+		}
+		$s .= "　";
+	    } else {
+		die;
+	    }
+	    $s;
+	},
+
+	# in Glossary
+	SE => sub {
+	    my $s = "【参照】";
+	    for (1..$#_) {
+		$s .= "、" if $_ > 1;
+		$s .= sprintf("%s", $_[$_]);
+	    }
+	    $s;
+	},
+
+	Ls => sub {
+	    my $s = $_[1];
+	    if ($s =~ /^(\d+)w$/) {
+		$list_indent = $1;
+	    }
+	    else {
+#		pure_string(\$s);
+		my $w = length($s);
+		#$list_indent = int(($w + 1) / 2) + 1;
+		$list_indent = int($w / 2);
+	    }
+	    '';
+	},
+	Ll => sub {
+	    my $s;
+	    unless ($inlist) {
+		$inlist = "//}\n";
+		if ($list_indent) {
+		    $s .= sprintf("//tabl[l(%dw)l]{\n", $list_indent);
+		} else {
+		    $s .= "//tabl{\n";
+		}
+	    }
+	    $s .= "$_[1]\t";
+	    $s;
+	},
+
+	Sm => sub {
+	    join '', @_[1..$#_];
+	},
+
+	Gl => sub {
+	    #g($_[1]) . $_[2];
+	    sprintf "%s%s", Gl($_[1]), ($_[2]);
+	},
+
+	Rn => sub {
+	    #sprintf "%s()%s", it($_[1]), $_[2];
+	    sprintf "%s%s", Rn($_[1]), $_[2];
+	},
+
+	Sc => sub {
+	    #sprintf "%s()%s", it($_[1]), $_[2];
+	    sprintf "%s%s", Sc($_[1]), ($_[2]);
+	},
+
+	Pn => sub {
+	    #tt($_[1]) . $_[2];
+	    #bf($_[1]) . $_[2];
+	    sprintf "%s%s", Pn($_[1]), $_[2];
+	},
+
+	Ns => sub {
+	    #sprintf "%s%s", it($_[1]), $_[2];
+	    sprintf "%s%s", Ns($_[1]), $_[2];
+	},
+
+	Nm => sub {
+	    my $s = $_[1];
+	    my @s = split(/(\p{InFullwidth}+)/, $s);
+
+	    if (0) {
+		my $result;
+		for (@s) {
+		    next if $_ eq '';
+		    $result .= /\p{InFullwidth}/ ? g($_) : it($_);
+		}
+		#warn4 "$s -> $result\n";
+		#sprintf "%s%s", $_[1], $_[2];
+		sprintf "%s%s", $result, $_[2];
+	    } else {
+		sprintf "%s%s", Nm($_[1]), $_[2];
+	    }
+	},
+
+	ES => sub {			# 前書きの「参考文献」のみ
+	    if (0) {
+		"//II $_[1]\n";
+	    } else {
+		'';
+	    }
+	},
+	Es => sub {
+	    $counter{ex} = 0;
+	    unless ($inlist) {
+		$inlist = "//}\n";
+	    }
+	    "//II 演習問題\n\n//tabL{\n";
+	},
+	Ex => sub {
+	    $counter{ex}++;
+	    sprintf("%s%d.%d\t",
+		    '*' x $_[1],
+		    $counter{chap}, $counter{ex});
+	},
+
+	Xc => sub {
+	    sprintf "第%s章%s", $_[1], $_[2];
+	},
+
+	Xs => sub {
+	    sprintf "%s節%s", $_[1], $_[2];
+	},
+
+	Px => sub {
+	    $fb->putline(".IX <POSIX>\n");
+	    if (@_ > 1 and $_[1] =~ /^(?:[.,]|、|。)$/) {
+		sprintf("POSIX", $_[1]);
+	    }
+	    elsif (@_ > 0 and $_[1]) {
+		sprintf("POSIX.%s", $_[1]);
+	    }
+	    else {
+		"POSIX";
+	    }
+	},
+
+	B => sub {
+	    g($_[1]) . $_[2];
+	},
+
+	Vr => sub {			# CW
+	    sprintf "//tt{%s//tt}%s", $_[1], $_[2];
+	},
+
+	# テーブル
+	TI => sub {			# TI, TL
+	    $counter{table}++;
+	    $string{Lb} = g(sprintf("表%d-%d",
+				    $counter{chap}, $counter{table}));
+	    $status = 'table';
+	    $string{Lc} = $string{Lb};
+	    my $label = $_[1];
+	    if ($_[0] eq 'TL' and $label ne "") {
+		#$label .= "。";
+		$label .= "\@\@hbreak()\\c";
+	    }
+	    sprintf("//t%02d%02d %s",
+		    $counter{chap}, $counter{table},
+		    $label);
+	},
+	Tl => \&ignore,
+	Te => sub {
+	    if ($status ne 'table') {
+		die;
+	    }
+	    $status = '';
+	    "\n";
+	},
+
+	# 図
+	FI => sub {			# FI, FL
+	    $counter{figure}++;
+	    $string{Lb} = g(sprintf("図%d-%d",
+				    $counter{chap}, $counter{figure}));
+	    $status = 'figure';
+	    $string{Lc} = $string{Lb};
+	    my $label = $_[1];
+	    if ($_[0] eq 'FL' and $label ne "") {
+		#$label .= "。";
+		$label .= "\@\@hbreak()\\c";
+	    }
+	    sprintf("//f%02d%02d %s",
+		    $counter{chap}, $counter{figure},
+		    $label);
+	},
+	Fl => \&ignore,
+	Fe => sub {
+	    if ($status ne 'figure') {
+		die "unexpected .Fe\n";
+	    }
+	    $status = '';
+	    "\n";
+	},
+
+	# 訳注
+	YP => sub {
+	    $counter{yakuchu}++;
+	    if ($_[1]) {
+		$yakuchu{$_[1]} = $counter{yakuchu};
+	    }
+	    sprintf("//ky%04d", $counter{yakuchu});
+	},
+	YS => sub {
+	    my $n;
+	    if ($_[1]) {
+		if (defined $yakuchu{$_[1]}) {
+		    $n = $yakuchu{$_[1]};
+		} else {
+		    error(sprintf(".YS \"%s\" is not defined", $_[1]));
+		    $n = $counter{yakuchu};
+		}
+	    } else {
+		$n = $counter{yakuchu};
+	    }
+	    sprintf("//ky{\n//ky%04d 【訳註】", $n);
+	},
+	YE => sub {
+	    "//}";
+	},
+
+	# PostScript ファイルを挿入
+	PSPIC => sub {
+	    sprintf "[ %s を挿入]", $_[1];
+	},
+
+    );
+
+    for my $macro (@ignore_macro) {
+	$mt{$macro} = \&ignore;
+    }
+
+    while (my($key, $val) = each %aliases) {
+	$mt{$key} = $mt{$val};
+    }
+    while (my($key, $val) = each %subaliases) {
+	$mt{$key} = $mt{$val};
+    }
+
+    #print Dumper(\%mt);
+
+    %string = (
+	'Bs' => 'BSD',
+	'Bv' => '3BSD',
+	'Bx' => '4BSD',
+	'b0' => '4.0BSD',
+	'b1' => '4.1BSD',
+	'b2' => '4.2BSD',
+	'b3' => '4.3BSD',
+	'b4' => '4.4BSD',
+	'4L' => '4.4BSD-Lite',
+	'Ob' => 'OpenBSD',
+	'Nb' => 'NetBSD',
+	'Fb' => 'FreeBSD',
+	'F3' => 'FreeBSD 3',
+	'F4' => 'FreeBSD 4',
+	'F5' => 'FreeBSD 5',
+	'F6' => 'FreeBSD 6',
+	'F7' => 'FreeBSD 7',
+	'F8' => 'FreeBSD 8',
+	'F9' => 'FreeBSD 9',
+	'F0' => 'FreeBSD 10',
+	's5' => 'System V',
+	'Ps' => 'POSIX',
+	'UX' => 'UNIX',
+	'VX' => 'VAX',
+	'PC' => 'PC',
+	'X8' => 'X86',
+	'Zf' => 'ZFS',
+	'Lx' => 'Linux',
+
+	'mm' => '　',	# .ds mm \h'\w'mm'u'
+	'(.' => '[',	# .[ の後につくことがあるが、引数は無視される
+	'.)' => ']',	# .] の後につくことがあるが .[ の中で処理されるので無視される
+	'Q'  => '`',
+	'U'  => '\'',
+
+	# Globally define our protocol macros 
+	'Ip' => 'IP',
+	'I4' => 'IPv4',
+	'I6' => 'IPv6',
+	'Tc' => 'TCP',
+	'Ud' => 'UDP',
+	'Ic' => 'ICMP',
+	'Is' => 'ISO',
+	'Os' => 'OSI',
+	'Tp' => 'TCP/IP',
+	'St' => 'SCTP',
+
+    );
+    #print Dumper(\%string);
+}
+
+sub g {
+    if ($status eq 'table' or $status eq 'figure') {
+	$_[0];
+    } else {
+	sprintf("//g{%s//g}", $_[0]);
+    }
+}
+
+sub it {
+    if ($status eq 'table' or $status eq 'figure') {
+	$_[0];
+    } else {
+	sprintf("//it{%s//it}", $_[0]);
+    }
+}
+
+sub tt {
+    if ($status eq 'table' or $status eq 'figure') {
+	$_[0];
+    } else {
+	sprintf("//tt{%s//tt}", $_[0]);
+    }
+}
+
+sub bf {
+    if ($status eq 'table' or $status eq 'figure') {
+	$_[0];
+    } else {
+	sprintf("//bf{%s//bf}", $_[0]);
+    }
+}
+
+sub Gl { bsdXx("bsdGl", @_) } # glossary
+sub Rn { bsdXx("bsdRn", @_) } # system routine
+sub Sc { bsdXx("bsdSc", @_) } # system call
+sub Pn { bsdXx("bsdPn", @_) } # pathname
+sub Nm { bsdXx("bsdNm", @_) } # other names
+sub Ns { bsdXx("bsdNs", @_) } # structure
+sub bsdXx {
+    if ($status eq 'table' or $status eq 'figure') {
+	$_[1];
+    } else {
+	sprintf("//%s{%s//}", @_);
+    }
+}
+
+sub closelist {
+    my $s = '';
+    if ($inlist) {
+	$s = $inlist;
+    }
+    $inlist = undef;
+    $s;
+}
+
+sub error {
+    my $msg = shift;
+    my($file, $line) = ($ARGV, $.);
+    warn "$file: $msg (line $line).\n";
+}
+
+sub do_roff {
+    local *_ = @_ ? shift : \$_;
+    # remove comment
+    s/\s*\\".*//;
+}
+
+sub do_string {
+    local *_ = @_ ? shift : \$_;
+    while (my $c = do_string_expand()) {
+	;
+    }
+}    
+
+sub pure_string {
+    local *_ = @_ ? shift : \$_;
+    # printf STDERR "%s -> ", $_;
+    do_special();
+    s%//LaTeX\{(.*?)//\}%$1%g;
+    s%//LaTeX\{(.*?)//LaTeX\}%$1%g;
+    s%//(?:g|it|tt)\{(.*?)//(?:g|it|tt)?\}%$1%g;
+    s%//minus%-%g;
+    # print STDERR $_, "\n";
+}
+
+sub do_special {
+    local *_ = @_ ? shift : \$_;
+    die if not defined;
+
+    state $special_except = qr{
+	//LaTeX\{(?s:.*?)//\}
+	|
+	//bsdindex\{(?s:.*?)//\}
+    }mx;
+
+    if (/$special_except/) {
+	my @b = split(/($special_except)/, $_);
+	for my $i (grep { ! $_ % 2 } 0 .. $#b) {
+	    do_special(\$b[$i]);
+	}
+	$_ = join '', @b;
+	return;
+    }
+
+    s/\\[%&^|]//g;
+    s/\\ / /g;
+    s|\\\((en)|-|g;
+    s|\\\((mi)|//minus//LaTeX{//LaTeX}|g;
+    #s/\\\((mu)/×/g;
+    s|\\-|//minus//LaTeX{//LaTeX}|g;
+    s|(?<=\p{InFullwidth})-(?=\p{InFullwidth})|//minus|g;
+    s/\\\((em)/――/g;
+    s/\\\((bu)/●/g;
+    s/\\\((->)/→/g;
+    s/\\s-(\d)([^\\]*?)\\s\+\1/$2/g;
+    s/\\s-\d([^\\]*?)\\s0/$1/g;
+
+    # font
+    s|\\fB(.*?)\\fP|//g{$1//g}|g;
+    s|\\fI(.*?)\\fP|//it{$1//it}|g;	# XXX どうする?
+    s|\\f\(BI(.*?)\\fP|//st{$1//st}|g;	# XXX どうする?
+    s|\\f\(CW(.*?)\\fP|//tt{$1//tt}|g;	# CW
+
+    # 結果に \ が出てくる変換
+    s|\\o'~g'|//LaTeX{\\~g//}|g;
+    s/\\e/\\/g;
+
+    die "$ARGV [$.] $_" if /\\f/;
+}    
+
+sub do_string_expand {
+    my $total;
+    while (my $c =
+	s{    \\ \* \[ ([^]]+) \]	# \*[...]
+	    | \\ \* \( (..)		# \*(..
+	    | \\ \* (.)			# \*.
+	}{
+	    if (defined $string{$+}) {
+		$string{$+};
+	    } else {
+		warn "string \"$+\" is not defined\n";
+		"〓";
+	    }
+	}egx) {
+	$total += $c;
+    }
+    $total;
+}
+
+sub getbib {
+    my $string = shift;
+    my $bib = `lkbib -p ../Refs/ref.bib \"$string\"`;
+    my(@author, $year, $result);
+    while ($bib =~ /^\%A.*\s(\w+)$/gm) {
+	push @author, $1;
+    }
+    if ($bib =~ /^\%D.*\s(\S+)$/m) {
+	$year = $1;
+    }
+    if (@author) {
+	$result .= $author[0];
+    }
+    if (@author == 2) {
+	$result .= " & $author[1]";
+    }
+    elsif (@author > 2) {
+	$result .= "et al.";
+    }
+    if ($year) {
+	$result .= ", $year";
+    }
+    printf STDERR "%s\t%s\n", $result, $string;
+    $result || "unknown";
+}
+
+BEGIN {
+#    use Bombay::BsdIndex;
+#    use vars qw($bsdindex);
+#    $bsdindex = new Bombay::BsdIndex();
+}
+sub do_index {
+#    my @index = @_;
+#    for (@index) {
+#	s/\\\^//g;
+#    }
+#    if ($o{indexterms}) {
+#	shift(@index) if $index[0] =~ /^(istart|iend)$/;
+#	print IT join("\t", @index), "\n";
+#    }
+#    my $index = $bsdindex->index(@index);
+#    $index;
+}
+
+######################################################################
+package FileBuf;
+
+use v5.14;
+use warnings;
+use Carp;
+
+sub new {
+    my $proto = shift;
+    my $class = ref $proto || $proto;
+    my $newi = bless {
+	name => undef,
+	lines => \my @lines,
+	chamber => [],
+	
+    }, $class;
+
+    if (@_) {
+	@lines = map /(.*\n|.+\z)/g, @_;
+    }
+
+    $newi;
+}
+
+sub name {
+    my $obj = shift;
+    if (@_) {
+	$obj->{name} = shift;
+    } else {
+	$obj->{name};
+    }
+}
+
+sub getline {
+    my $obj = shift;
+    my($chamber, $lines) = @{$obj}{qw(chamber lines)};
+    if (@$chamber) {
+	shift @$chamber;
+    } elsif (@$lines) {
+	$.++;
+	shift @$lines;
+    } else {
+	undef;
+    }
+}
+
+sub putline {
+    my $obj = shift;
+    unshift @{$obj->{chamber}}, map /(.*\n|.+\z)/g, @_;
+    $obj;
+}
+
+sub lines {
+    my $obj = shift;
+    int @{$obj->{lines}};
+}
