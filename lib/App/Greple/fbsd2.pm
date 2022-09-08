@@ -10,7 +10,7 @@ greple -Mfbsd2 [ options ]
 
     --by <part>  makes <part> as a data record
     --in <part>  search from <part> section
-		 
+
     --jp         print Japanese chunk
     --eg         print English chunk
     --egjp       print Japanese/English chunk
@@ -264,24 +264,27 @@ $ENV{FreeBSDbook} //= $ENV{FreeBSDBook};
 my $target = -1;
 my $region;
 my $file;
+my @boundary;
 
 sub setup {
     if ($target != \$_) {
 	$region = new Bombay::RoffDoc ( TEXT => $_, NAME => $file );
+	@boundary = sub { push @_, pos() while /^/mg; @_ }->();
 	$target = \$_;
     }
+    1;
 }
 
 sub part {
     my %arg = @_;
     $file = delete $arg{&FILELABEL};
-
-    setup;
-    _part(%arg);
+    setup && $region->part(%arg);
 }
 
-sub _part {
-    $region->part(@_);
+sub line {
+    use List::BinarySearch qw(binsearch_pos);
+    my $pos = binsearch_pos { $a <=> $b } +shift, @boundary;
+    $pos + 1;
 }
 
 ######################################################################
@@ -291,6 +294,9 @@ sub _part {
 sub lint {
     my %attr = @_;
     my $file = $attr{&FILELABEL};
+
+    # skip c00.preface/0.j
+    return if /by Pearson Education/;
 
     for my $param (
 	{ part => 'e',
@@ -305,6 +311,23 @@ sub lint {
 	  test => sub { /\n\n\z/ },
 	  mesg => "End with empty line."
 	},
+	{ part => 'j',
+	  test => sub {
+	      return 0 if /(?!■)\P{ASCII}/;
+	      return 0 if m{\A(
+				■.*\n
+				| \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|ZZ).*\n
+				| \.\[       \n (.+\n)+? \.\] \n
+				| \.CI       \n (.+\n)+? \.Ce \n
+				| \.EQ    .* \n (.+\n)+? \.EN \n
+				| \.T[Il] .* \n (.+\n)+? \.Te \n
+				| \.F[Il] .* \n (.+\n)+? \.Fe \n
+				| \.vS       \n (.+\n)+? \.vE \n
+			      )* \z }x;
+	      return 1;
+	  },
+	  mesg => "Possibly not translated."
+	},
 	)
     {
 	my @part = ref $param->{part} eq 'ARRAY' ? @{$param->{part}} : $param->{part};
@@ -315,12 +338,13 @@ sub lint {
 	    my($from, $to) = @{$r};
 	    my $text = substr $_, $from, $to - $from;
 	    if (do {local *_ = \$text; $test->() }) {
-		printf "$file: %s\n", main::color('RS', " $mesg ");
+		printf("%s:%d: %s\n",
+		       $file, line($from),
+		       main::color('RS', " $mesg "));
 		$text =~ s/^/\t/mg;
 		print $text;
 	    }
 	}
-	
     }
 }
 
@@ -589,7 +613,7 @@ option --progress \
 	--print    &__PACKAGE__::count_progress \
 	--epilogue &__PACKAGE__::show_progress
 
-option --lint --begin __PACKAGE__::lint --re (?=never)match
+option --lint --begin __PACKAGE__::lint --re \A(?=never)match
 
 
 # 英語テキストに非ASCII文字があるのはおかしい
