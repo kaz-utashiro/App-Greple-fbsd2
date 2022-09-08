@@ -316,9 +316,9 @@ sub lint {
 	      return 0 if /(?!■)\P{ASCII}/;
 	      return 0 if m{\A(
 				■.*\n
-				| \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|ZZ).*\n
+				| \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|RN|SM|ZZ).*\n
 				| \.\[       \n (.+\n)+? \.\] \n
-				| \.CI       \n (.+\n)+? \.Ce \n
+				| \.CI    .* \n (.+\n)+? \.Ce \n
 				| \.EQ    .* \n (.+\n)+? \.EN \n
 				| \.T[Il] .* \n (.+\n)+? \.Te \n
 				| \.F[Il] .* \n (.+\n)+? \.Fe \n
