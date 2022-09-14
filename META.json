@@ -4,7 +4,7 @@
       "Kazumasa Utashiro"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v3.1.12, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "Minilla/v3.1.19, CPAN::Meta::Converter version 2.150010",
    "license" : [
       "perl_5"
    ],
@@ -42,7 +42,8 @@
       },
       "runtime" : {
          "requires" : {
-            "App::Greple" : "8.5702",
+            "App::Greple" : "8.58",
+            "App::Greple::update" : "0.03",
             "Try::Tiny" : "0",
             "perl" : "v5.14.0"
          }
@@ -61,7 +62,7 @@
       "homepage" : "https://github.com/kaz-utashiro/App-Greple-fbsd2",
       "repository" : {
          "type" : "git",
-         "url" : "git://github.com/kaz-utashiro/App-Greple-fbsd2.git",
+         "url" : "https://github.com/kaz-utashiro/App-Greple-fbsd2.git",
          "web" : "https://github.com/kaz-utashiro/App-Greple-fbsd2"
       }
    },

@@ -9,7 +9,7 @@ greple -Mfbsd2 \[ options \]
 
     --by <part>  makes <part> as a data record
     --in <part>  search from <part> section
-                 
+
     --jp         print Japanese chunk
     --eg         print English chunk
     --egjp       print Japanese/English chunk
