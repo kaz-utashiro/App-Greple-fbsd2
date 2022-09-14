@@ -255,7 +255,7 @@ use Bombay::RoffDoc;
 use Bombay::Dict;
 
 use Exporter 'import';
-our @EXPORT      = qw(&wlist $opt_prefix &pattern_file);
+our @EXPORT      = qw(&wlist $opt_prefix &pattern_file &clean_square);
 our %EXPORT_TAGS = ();
 our @EXPORT_OK   = qw();
 
@@ -291,6 +291,21 @@ sub line {
 # lint
 ######################################################################
 
+sub check_not_translated{
+    return 0 if /(?!■)\P{ASCII}++/;
+    return 0 if m{\A(
+		      ■.*\n
+		      | \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|RN|SM|ZZ).*\n
+		      | \.\[       \n (.+\n)+? \.\] \n
+		      | \.CI    .* \n (.+\n)+? \.Ce \n
+		      | \.EQ    .* \n (.+\n)+? \.EN \n
+		      | \.T[Il] .* \n (.+\n)+? \.Te \n
+		      | \.F[Il] .* \n (.+\n)+? \.Fe \n
+		      | \.vS       \n (.+\n)+? \.vE \n
+		    )* \z }x;
+    return 1;
+}
+
 sub lint {
     my %attr = @_;
     my $file = $attr{&FILELABEL};
@@ -312,20 +327,7 @@ sub lint {
 	  mesg => "End with empty line."
 	},
 	{ part => 'j',
-	  test => sub {
-	      return 0 if /(?!■)\P{ASCII}/;
-	      return 0 if m{\A(
-				■.*\n
-				| \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|RN|SM|ZZ).*\n
-				| \.\[       \n (.+\n)+? \.\] \n
-				| \.CI    .* \n (.+\n)+? \.Ce \n
-				| \.EQ    .* \n (.+\n)+? \.EN \n
-				| \.T[Il] .* \n (.+\n)+? \.Te \n
-				| \.F[Il] .* \n (.+\n)+? \.Fe \n
-				| \.vS       \n (.+\n)+? \.vE \n
-			      )* \z }x;
-	      return 1;
-	  },
+	  test =>  \&check_not_translated,
 	  mesg => "Possibly not translated."
 	},
 	)
@@ -346,6 +348,17 @@ sub lint {
 	    }
 	}
     }
+}
+
+#
+# option: --clean-square
+# 翻訳済みの日本語部分に残っている ■ を取り除く
+#
+sub clean_square {
+    return $_ if &check_not_translated,;
+    s/\A■(?!■).*\n//;
+    s/[^■\n]+\K■(?!■)\s*//;
+    $_;
 }
 
 ######################################################################
@@ -615,6 +628,7 @@ option --progress \
 
 option --lint --begin __PACKAGE__::lint --re \A(?=never)match
 
+option --clean-square --le &part(j) --cm &clean_square
 
 # 英語テキストに非ASCII文字があるのはおかしい
 option --check-nonascii \
