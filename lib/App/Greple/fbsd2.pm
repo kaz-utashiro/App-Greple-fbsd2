@@ -658,17 +658,25 @@ option --subst-word-replace --check-word --replace
 
 
 # .JP セクションの最初の ■ 1つを探す
-define (?#first-single-square) (?x)	\
-    (?> ^\.JP .*\n )			\
-    (?> (?: (?!\.EG|■) .*\n		\
-            |				\
-            ■■ .*\n			\
-        ) * ) \K			\
+define (?#first-single-square) <<END
+    (?x)
+    (?> ^\.JP .*\n )
+    (?> (?: (?!\.EG|■) .*\n
+            |
+            ■■ .*\n
+        ) * ) \K
     ■
+END
 option --todo --re (?#first-single-square)
 help --todo find first single square mark in .JP section
 
 # .JP セクションの最初の ■ を探す
-define (?#first-square) (?>^\.JP.*\n)(?:(?!\.EG|■).*\n)*.*?\K■+
+define (?#first-square) <<END
+    (?x)
+    (?> ^\.JP .*\n )
+    (?: (?!\.EG|■) .*\n )*+
+    [^■\n]* \K
+    ■+
+END
 option --todo-all --re (?#first-square)
 help --todo-all find first square mark in .JP section
