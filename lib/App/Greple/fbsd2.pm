@@ -661,7 +661,7 @@ option --subst-word-replace --check-word --replace
 define (?#first-single-square) <<END
     (?x)
     (?> ^\.JP .*\n )
-    (?> (?: (?!\.EG|■) .*\n
+    (?> (?: (?!\.EJ|■) .*\n
             |
             ■■ .*\n
         ) * ) \K
@@ -674,9 +674,12 @@ help --todo find first single square mark in .JP section
 define (?#first-square) <<END
     (?x)
     (?> ^\.JP .*\n )
-    (?: (?!\.EG|■) .*\n )*+
-    [^■\n]* \K
+    (?: (?!\.EJ) [^■\n]* \n )*+
+    (?!\.EJ)[^■\n]*+ \K
     ■+
 END
 option --todo-all --re (?#first-square)
 help --todo-all find first square mark in .JP section
+
+option --todo-everything --re ■+ --in jp
+
