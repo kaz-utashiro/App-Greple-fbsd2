@@ -638,6 +638,21 @@ option --check-nonascii \
 option --check-comm \
 	-n --separate -e ※+ --in e,j --by e,j
 
+# 日本語ブロックに4語以上のアルファベットが続くのはおかしい
+# 4語以上だと、若干 false positive が出る
+option --english-in-jp \
+	# 特定のファイルを序外
+	-Mselect --x-select-path c00.preface/0.j \
+		 --x-select-path c17.index/Trailer.j \
+	--re '(?a)^\w+([\n ]\w+){3,}' \
+	# 参考文献は序外
+	--exclude '^\.\[(?s:.*?)\n\.\]' \
+	# すべての単語が大文字か数字で始まるものは序外
+	--exclude '(?a)^[A-Z]\w*([\n ][A-Z\d]\w*){3,}' \
+	--exclude 'University of Cambridge Computer Laboratory' \
+	--exclude 'Advanced Configuration and Power Interface' \
+	--in j
+
 define $WORDLIST $ENV{FreeBSDbook}/2nd_FreeBSD/WORDLIST.txt
 define $EXCLUDE $ENV{FreeBSDbook}/2nd_FreeBSD/EXCLUDE.txt
 
