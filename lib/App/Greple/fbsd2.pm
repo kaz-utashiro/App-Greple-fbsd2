@@ -584,7 +584,7 @@ option --colorcode  --need 1 --regioncolor \
 		    --le &part(mark)    --cm Y \
 		    --le &part(gap)     --cm N
 
-option --ed1 --chdir $ENV{FreeBSDbook}/1st_FreeBSD/daemon3 --glob c$<shift>.*/?.j
+option --ed1: --chdir $ENV{FreeBSDbook}/1st_FreeBSD/daemon3 --glob c$<shift>.*/?.j
 option --ed1 --ed1: ??
 
 option --ed2: --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c$<shift>.*/?.j
