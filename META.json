@@ -44,7 +44,10 @@
          "requires" : {
             "App::Greple" : "8.58",
             "App::Greple::update" : "0.03",
+            "App::Greple::xp" : "0.04",
+            "JSON" : "0",
             "Try::Tiny" : "0",
+            "Unicode::EastAsianWidth" : "0",
             "perl" : "v5.14.0"
          }
       },
@@ -73,6 +76,6 @@
       "LHazy <fhazy2255@gmail.com>",
       "YASUOKA Masahiko <yasuoka@yasuoka.net>"
    ],
-   "x_serialization_backend" : "JSON::PP version 4.07",
+   "x_serialization_backend" : "JSON::PP version 4.12",
    "x_static_install" : 1
 }
