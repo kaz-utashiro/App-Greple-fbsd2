@@ -255,7 +255,7 @@ use Bombay::RoffDoc;
 use Bombay::Dict;
 
 use Exporter 'import';
-our @EXPORT      = qw(&wlist $opt_prefix &pattern_file &clean_square);
+our @EXPORT      = qw(&wlist $opt_prefix &clean_square);
 our %EXPORT_TAGS = ();
 our @EXPORT_OK   = qw();
 
@@ -514,36 +514,6 @@ sub json {
     $json->encode(\@list);
 }
 
-######################################################################
-# read pattern file
-######################################################################
-
-use App::Greple::Regions qw(match_regions merge_regions);
-
-our $opt_hash_comment = 1;
-our $opt_slash_comment = 1;
-sub pattern_file {
-    my %arg = @_;
-    my $target = delete $arg{&FILELABEL} or die;
-    my @files = grep { $arg{$_} == 1 } keys %arg;
-    my @r;
-    for my $file (@files) {
-	open my $fh, $file or die "$file: $!";
-	while (my $p = <$fh>) {
-	    chomp $p;
-	    if ($opt_hash_comment) {
-		next if $p =~ /^\s*#/;
-	    }
-	    if ($opt_slash_comment) {
-		$p =~ s{//.*}{};
-	    }
-	    next unless $p =~ /\S/;
-	    push @r, match_regions pattern => qr/$p/;
-	}
-    }
-    merge_regions @r;
-}
-
 1;
 
 __DATA__
@@ -661,8 +631,7 @@ define $EXCLUDE $ENV{FreeBSDbook}/2nd_FreeBSD/EXCLUDE.txt
 
 option --wordlist -Msubst --dict $WORDLIST
 
-option --exclude-file  --exclude &pattern_file($<shift>)
-option --exclude-words --exclude-file $EXCLUDE
+option --exclude-words -Mxp --exclude-pattern $EXCLUDE
 
 option --check-word \
 	--wordlist \
