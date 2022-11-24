@@ -539,9 +539,12 @@ option --egjp     --by egjp
 option --para     --by para
 option --comment  --by comment
 
-option --injp      --in j --roffsafe --nocomment
-option --ineg      --in e --roffsafe --nocomment
-option --inej      --in e,j --roffsafe --nocomment
+option --in-jp      --in j --roffsafe --nocomment
+option --in-eg      --in e --roffsafe --nocomment
+option --in-ej      --in e,j --roffsafe --nocomment
+
+option --in-tbl     --inside '^\.TI(?s:.*?)^\.Te'
+option --in-fig     --inside '^\.F[LI](?s:.*?)^\.Fe'
 
 option --retrieve   -h --nocolor --le &part($<shift>)
 
