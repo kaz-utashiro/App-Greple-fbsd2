@@ -1,11 +1,12 @@
-package Bombay::BsdIndex;
+l235package Bombay::BsdIndex;
 
-use strict;
+use v5.14;
 use warnings;
 use utf8;
 use open IO => 'utf8', ':std';
 
 use Data::Dumper;
+use App::tbl2latex::Util;
 
 my @jindex;
 my @phonetic;
@@ -77,6 +78,11 @@ sub index {
 	$range = shift @arg;
     }
 
+    for (@arg) {
+	s/\\\&//g;
+	s/\\s-?\d//g;
+    }
+
     if (@arg == 1) {
 	local($_) = $arg[0];
 	if (/^([A-Z][a-z]+),~([A-Z][a-z]+)$/) {		# 人名
@@ -103,7 +109,7 @@ sub index {
 	}
     }
     else {
-	carp "too many argument in .IX";
+	carp "too many argument in .IX: @_";
     }
     
     if ($range eq 'istart') {
@@ -118,6 +124,24 @@ sub index {
 my %var_table;
 BEGIN {
     %var_table = (
+#	'$Bv' => '3BSD',
+#	'$Bx' => '4BSD',
+#	'$b0' => '4.0BSD',
+#	'$b1' => '4.1BSD',
+#	'$b2' => '4.2BSD',
+#	'$b3' => '4.3BSD',
+#	'$b4' => '4.4BSD',
+#	'$4L' => '4.4BSD Lite',
+#	'$Fb' => 'FreeBSD',
+#	'$Ob' => 'OpenBSD',
+#	'$Nb' => 'NetBSD',
+#	'$Bs' => 'BSD',
+#	'$Lx' => 'Linux',
+#	'$s5' => 'System~V',
+#	'$UX' => 'UNIX',
+#	'$VX' => 'VAX',
+#	'$PC' => 'PC',
+	'$Bs' => 'BSD',
 	'$Bv' => '3BSD',
 	'$Bx' => '4BSD',
 	'$b0' => '4.0BSD',
@@ -125,16 +149,27 @@ BEGIN {
 	'$b2' => '4.2BSD',
 	'$b3' => '4.3BSD',
 	'$b4' => '4.4BSD',
-	'$4L' => '4.4BSD Lite',
-	'$Fb' => 'FreeBSD',
+	'$4L' => '4.4BSD-Lite',
 	'$Ob' => 'OpenBSD',
 	'$Nb' => 'NetBSD',
-	'$Bs' => 'BSD',
-	'$Lx' => 'Linux',
-	'$s5' => 'System~V',
+	'$Fb' => 'FreeBSD',
+	'$F3' => 'FreeBSD 3',
+	'$F4' => 'FreeBSD 4',
+	'$F5' => 'FreeBSD 5',
+	'$F6' => 'FreeBSD 6',
+	'$F7' => 'FreeBSD 7',
+	'$F8' => 'FreeBSD 8',
+	'$F9' => 'FreeBSD 9',
+	'$F0' => 'FreeBSD 10',
+	'$s5' => 'System V',
+	'$Ps' => 'POSIX',
+	'$Px' => 'POSIX',
 	'$UX' => 'UNIX',
 	'$VX' => 'VAX',
 	'$PC' => 'PC',
+	'$X8' => 'x86',
+	'$Zf' => 'ZFS',
+	'$Lx' => 'Linux',
     );
 }
 
@@ -161,7 +196,7 @@ sub _index2 {
 }
 
 sub bsdindex {
-    sprintf("//bsdindex{%s//}", @_);
+    sprintf("\\index{%s}", @_);
 }
 
 sub j {
@@ -192,20 +227,20 @@ sub index_entry {
 
     replace_vars(\$label);
     $label =~ tr/,/~/;
-    $label =~ s/{([\200-\377]*?)}/$1/g;
+    $label =~ s/{(\P{ASCII}#*?)}/$1/g;
     $label =~ s/{(.*?)}/&$sub_it($1)/ge;
     $label =~ s/\[(.*?)\]/&$sub_bf($1)/ge;
     $label =~ s/<(.*?)>/$1/g;
-    $label =~ s/(?<=[\0-\177])~(?=[\0-\177])/ /g;
+    $label =~ s/(?<=\p{ASCII})~(?=\p{ASCII})/ /g;
     $label =~ s/~//g;
-    $label =~ s/(?<=[\200-\377]) +(?=[\200-\377])//g;
+    $label =~ s/(?<=\P{ASCII}) +(?=\P{ASCII})//g;
     $label =~ s/([_#&])/\\$1/g;
     my $space = '$\,$';
     $label =~ s/\(\)$/${space}(${space})/;
 
     replace_vars(\$yomi);
     $yomi =~ tr/,/~/;
-    $yomi =~ s/([\200-\377]+)/$yomi{$1} || $1/ge;
+    $yomi =~ s/(\P{ASCII}+)/$yomi{$1} || $1/ge;
     $yomi =~ s/[{}\[\]<>~! ]//g;
     $yomi =~ tr[A-Z][a-z];
 

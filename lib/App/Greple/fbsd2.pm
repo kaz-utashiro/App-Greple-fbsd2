@@ -673,3 +673,5 @@ help --todo-all find first square mark in .JP section
 
 option --todo-everything --re ■+ --in jp
 
+option --too-many-index \
+	-nE '^\.IX( +(istart|iend))?+( +\S+){3,}' --in jp,macro
