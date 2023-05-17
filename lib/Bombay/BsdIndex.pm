@@ -1,4 +1,4 @@
-l235package Bombay::BsdIndex;
+package Bombay::BsdIndex;
 
 use v5.14;
 use warnings;
