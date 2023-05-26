@@ -216,7 +216,7 @@ if (0) {
     $sub_it = sub { sprintf("\\textit{%s}", @_) };
     $sub_bf = sub { sprintf("{\\gt{}%s}", @_) };
 }
-    $sub_it = sub { sprintf("{\\it{}%s}", @_) };
+    $sub_it = sub { sprintf("{\\it{%s}}", @_) };
     $sub_bf = sub { sprintf("\\textbf{%s}", @_) };
 }
 
@@ -225,27 +225,36 @@ sub index_entry {
     my($label, $yomi);
     $label = $yomi = $name;
 
-    replace_vars(\$label);
-    $label =~ tr/,/~/;
-    $label =~ s/{(\P{ASCII}#*?)}/$1/g;
-    $label =~ s/{(.*?)}/&$sub_it($1)/ge;
-    $label =~ s/\[(.*?)\]/&$sub_bf($1)/ge;
-    $label =~ s/<(.*?)>/$1/g;
-    $label =~ s/(?<=\p{ASCII})~(?=\p{ASCII})/ /g;
-    $label =~ s/~//g;
-    $label =~ s/(?<=\P{ASCII}) +(?=\P{ASCII})//g;
-    $label =~ s/([_#&])/\\$1/g;
-    my $space = '$\,$';
-    $label =~ s/\(\)$/${space}(${space})/;
+    for ($label) {
+	replace_vars \$_;
+	tr/,/~/;
+	s/{(\P{ASCII}#*?)}/$1/g;
+	s/{(.*?)}/&$sub_it($1)/ge;
+	s/\[(.*?)\]/&$sub_bf($1)/ge;
+	s/<(.*?)>/$1/g;
+	s/(?<=\p{ASCII})~(?=\p{ASCII})/ /g;
+	s/~//g;
+	s/(?<=\P{ASCII}) +(?=\P{ASCII})//g;
+	s/([_&])/\\$1/g;
 
-    replace_vars(\$yomi);
-    $yomi =~ tr/,/~/;
-    $yomi =~ s/(\P{ASCII}+)/$yomi{$1} || $1/ge;
-    $yomi =~ s/[{}\[\]<>~! ]//g;
-    $yomi =~ tr[A-Z][a-z];
+	# "#!" を索引に入れるのは難しい
+	s/#/♯/g;
+	s/!/\\hspace{-0.2em}！\\hspace{-0.2em}/g;
 
-    if ($label eq $yomi) {
-	sprintf("%s", $label);
+	my $space = '$\,$';
+	s/\(\)$/${space}(${space})/;
+    }
+
+    for ($yomi) {
+	replace_vars \$_;
+	tr/,/~/;
+	s/(\P{ASCII}+)/$yomi{$1} || $1/ge;
+	s/[{}\[\]<>~! ]//g;
+	tr[A-Z][a-z];
+    }
+
+    if ($yomi eq '' or $yomi eq $label) {
+	$label;
     } else {
 	sprintf("%s\@%s", $yomi, $label);
     }
