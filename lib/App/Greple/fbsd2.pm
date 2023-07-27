@@ -543,8 +543,17 @@ option --in-jp      --in j --roffsafe --nocomment
 option --in-eg      --in e --roffsafe --nocomment
 option --in-ej      --in e,j --roffsafe --nocomment
 
-option --in-tbl     --inside '^\.TI(?s:.*?)^\.Te'
-option --in-fig     --inside '^\.F[LI](?s:.*?)^\.Fe'
+define :pat-tbl:  ^\.TI(?s:.*?)^\.Te
+define :pat-fig:  ^\.F[LI](?s:.*?)^\.Fe
+define :pat-code: ^\.CI(?s:.*?)^\.Ce
+define :pat-ref:  ^\.\[(?s:.*?)^\.\]
+
+option --in-tbl     --inside  :pat-tbl:
+option --in-fig     --inside  :pat-fig:
+option --ex-tbl     --exclude :pat-tbl:
+option --ex-fig     --exclude :pat-fig:
+option --ex-code    --exclude :pat-code:
+option --ex-ref     --exclude :pat-ref:
 
 option --retrieve   -h --nocolor --le &part($<shift>)
 
