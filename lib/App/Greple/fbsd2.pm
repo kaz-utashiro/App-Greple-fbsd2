@@ -539,9 +539,9 @@ option --egjp     --by egjp
 option --para     --by para
 option --comment  --by comment
 
-option --in-jp      --in j --roffsafe --nocomment
-option --in-eg      --in e --roffsafe --nocomment
-option --in-ej      --in e,j --roffsafe --nocomment
+option --in-jp      --in j --roffsafe
+option --in-eg      --in e --roffsafe
+option --in-ej      --in e,j --roffsafe
 
 define :pat-tbl:  ^\.TI(?s:.*?)^\.Te
 define :pat-fig:  ^\.F[LI](?s:.*?)^\.Fe
@@ -646,14 +646,50 @@ option --wordlist -Msubst --dict $WORDLIST
 option --exclude-words -Mxp --exclude-pattern $EXCLUDE
 
 option --check-word \
+	-Mgit --only-git-files \
 	--wordlist \
-	--exclude-words \
-	--in j
+	--exclude-words
 
-option --subst-word         --check-word --subst
-option --subst-word-diff    --check-word --diff
-option --subst-word-create  --check-word --create
-option --subst-word-replace --check-word --replace
+option --subst-word   --check-word --subst
+option --diff-word    --check-word --diff
+option --replace-word --check-word --overwrite
+
+expand --for-text  --exclude :roffcomment: --ed2 --in j
+expand --for-gloss --gloss2 --nocomment
+expand --for-index --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c17.index/INDEX_*
+expand --for-tbl   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/*.ja.tbl
+expand --for-fig   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/*.ja.{fig,xfig}
+expand --for-svg   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/*.ja.svg
+
+option   --check-word-text --check-word   --for-text
+option   --subst-word-text --subst-word   --for-text
+option    --diff-word-text --diff-word    --for-text
+option --replace-word-text --replace-word --for-text
+
+option   --check-word-gloss --check-word   --for-gloss
+option   --subst-word-gloss --subst-word   --for-gloss
+option    --diff-word-gloss --diff-word    --for-gloss
+option --replace-word-gloss --replace-word --for-gloss
+
+option   --check-word-index --check-word   --for-index
+option   --subst-word-index --subst-word   --for-index
+option    --diff-word-index --diff-word    --for-index
+option --replace-word-index --replace-word --for-index
+
+option   --check-word-tbl --check-word   --for-tbl
+option   --subst-word-tbl --subst-word   --for-tbl
+option    --diff-word-tbl --diff-word    --for-tbl
+option --replace-word-tbl --replace-word --for-tbl
+
+option   --check-word-fig --check-word   --for-fig
+option   --subst-word-fig --subst-word   --for-fig
+option    --diff-word-fig --diff-word    --for-fig
+option --replace-word-fig --replace-word --for-fig
+
+option   --check-word-svg --check-word   --for-svg
+option   --subst-word-svg --subst-word   --for-svg
+option    --diff-word-svg --diff-word    --for-svg
+option --replace-word-svg --replace-word --for-svg
 
 
 # .JP セクションの最初の ■ 1つを探す
