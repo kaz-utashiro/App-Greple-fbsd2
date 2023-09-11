@@ -657,9 +657,10 @@ option --replace-word --check-word --overwrite
 expand --for-text  --exclude :roffcomment: --ed2 --in j
 expand --for-gloss --gloss2 --nocomment
 expand --for-index --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c17.index/INDEX_*
-expand --for-tbl   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/*.ja.tbl
-expand --for-fig   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/*.ja.{fig,xfig}
-expand --for-svg   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/*.ja.svg
+expand --for-tbl   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.tbl
+expand --for-fig   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.{fig,xfig}
+expand --for-svg   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.svg
+expand --for-code  --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.code
 
 option   --check-word-text --check-word   --for-text
 option   --subst-word-text --subst-word   --for-text
@@ -690,6 +691,11 @@ option   --check-word-svg --check-word   --for-svg
 option   --subst-word-svg --subst-word   --for-svg
 option    --diff-word-svg --diff-word    --for-svg
 option --replace-word-svg --replace-word --for-svg
+
+option   --check-word-code --check-word   --for-code
+option   --subst-word-code --subst-word   --for-code
+option    --diff-word-code --diff-word    --for-code
+option --replace-word-code --replace-word --for-code
 
 
 # .JP セクションの最初の ■ 1つを探す
