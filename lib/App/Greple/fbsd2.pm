@@ -573,7 +573,7 @@ option --ed2: --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c$<shift>.*/?.j
 option --ed2 --ed2: ??
 
 option --gloss1 --chdir $ENV{FreeBSDbook}/1st_FreeBSD/daemon3/c15.gloss --glob */*.j
-option --gloss2 --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/c16.gloss --glob defs-*/*.j
+option --gloss2 --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c16.gloss/defs-*/*.j
 
 help --jp           print Japanese chunk
 help --eg           print English chunk
@@ -654,49 +654,20 @@ option --subst-word   --check-word --subst
 option --diff-word    --check-word --diff
 option --replace-word --check-word --overwrite
 
-expand --for-text  --exclude :roffcomment: --ed2 --in j
-expand --for-gloss --gloss2 --nocomment
-expand --for-index --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c17.index/INDEX_*
-expand --for-tbl   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.tbl
-expand --for-fig   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.{fig,xfig}
-expand --for-svg   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.svg
-expand --for-code  --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.code
+option --for-text  --exclude :roffcomment: --ed2 --in j
+option --for-gloss --gloss2 --nocomment
+option --for-index --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c17.index/INDEX_*
+option --for-tbl   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.tbl
+option --for-fig   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.{fig,xfig}
+option --for-svg   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.svg
+option --for-code  --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.code
 
-option   --check-word-text --check-word   --for-text
-option   --subst-word-text --subst-word   --for-text
-option    --diff-word-text --diff-word    --for-text
-option --replace-word-text --replace-word --for-text
-
-option   --check-word-gloss --check-word   --for-gloss
-option   --subst-word-gloss --subst-word   --for-gloss
-option    --diff-word-gloss --diff-word    --for-gloss
-option --replace-word-gloss --replace-word --for-gloss
-
-option   --check-word-index --check-word   --for-index
-option   --subst-word-index --subst-word   --for-index
-option    --diff-word-index --diff-word    --for-index
-option --replace-word-index --replace-word --for-index
-
-option   --check-word-tbl --check-word   --for-tbl
-option   --subst-word-tbl --subst-word   --for-tbl
-option    --diff-word-tbl --diff-word    --for-tbl
-option --replace-word-tbl --replace-word --for-tbl
-
-option   --check-word-fig --check-word   --for-fig
-option   --subst-word-fig --subst-word   --for-fig
-option    --diff-word-fig --diff-word    --for-fig
-option --replace-word-fig --replace-word --for-fig
-
-option   --check-word-svg --check-word   --for-svg
-option   --subst-word-svg --subst-word   --for-svg
-option    --diff-word-svg --diff-word    --for-svg
-option --replace-word-svg --replace-word --for-svg
-
-option   --check-word-code --check-word   --for-code
-option   --subst-word-code --subst-word   --for-code
-option    --diff-word-code --diff-word    --for-code
-option --replace-word-code --replace-word --for-code
-
+option  --for-others \
+	--for-gloss \
+	--for-index \
+	--for-tbl   \
+	--for-fig   \
+	--for-code
 
 # .JP セクションの最初の ■ 1つを探す
 define (?#first-single-square) <<END
