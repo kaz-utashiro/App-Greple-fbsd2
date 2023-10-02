@@ -5,6 +5,7 @@ requires 'App::Greple::git', '0.04';
 requires 'App::Greple::update', '0.03';
 requires 'App::Greple::xp', '0.04';
 requires 'App::Greple::frame', '0.07';
+requires 'App::sdif', '4.28';
 requires 'Try::Tiny';
 requires 'JSON';
 

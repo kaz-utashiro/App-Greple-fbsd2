@@ -2,6 +2,10 @@ Revision history for Perl extension App-Greple-fbsd2
 
 {{$NEXT}}
 
+3.01 2023-10-02T18:28:38Z
+
+    - introduce --sxs option
+
 3.00 2023-09-11T04:26:26Z
 
     - Version 3.00

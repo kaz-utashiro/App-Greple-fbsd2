@@ -7,6 +7,8 @@ fbsd2 - Module for translation of the book "The Design and Implementation of the
 
 greple -Mfbsd2 \[ options \]
 
+    --sxs        show English/Japanese text side-by-side
+
     --by <part>  makes <part> as a data record
     --in <part>  search from <part> section
 
@@ -100,6 +102,12 @@ command.
 - **--lint**
 
     Execute sanity check for eg-jp document format.
+
+- **--sxs**
+
+    Print English and Japanese text in side-by-side format.  Requires
+    [sdif(1)](http://man.he.net/man1/sdif) command installed.  Indirectly uses **--cmark** option which
+    produces conflict-markder style output.
 
 # EXAMPLE
 
