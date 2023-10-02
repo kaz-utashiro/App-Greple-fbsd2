@@ -8,6 +8,8 @@ fbsd2 - Module for translation of the book "The Design and Implementation of the
 
 greple -Mfbsd2 [ options ]
 
+    --sxs        show English/Japanese text side-by-side
+
     --by <part>  makes <part> as a data record
     --in <part>  search from <part> section
 
@@ -105,6 +107,12 @@ Seach edtion 1 and edtion 2 text files, and glossary files of each.
 =item B<--lint>
 
 Execute sanity check for eg-jp document format.
+
+=item B<--sxs>
+
+Print English and Japanese text in side-by-side format.  Requires
+L<sdif(1)> command installed.  Indirectly uses B<--cmark> option which
+produces conflict-markder style output.
 
 =back
 
@@ -295,7 +303,7 @@ sub check_not_translated{
     return 0 if /(?!■)\P{ASCII}++/;
     return 0 if m{\A(
 		      ■.*\n
-		      | \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|RN|SM|ZZ).*\n
+		      | \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|RN|SM|ZZ|PSPIC).*\n
 		      | \.\[       \n (.+\n)+? \.\] \n
 		      | \.CI    .* \n (.+\n)+? \.Ce \n
 		      | \.EQ    .* \n (.+\n)+? \.EN \n
@@ -312,6 +320,11 @@ sub lint {
 
     # skip c00.preface/0.j
     return if /by Pearson Education/;
+
+    my @e = part(e=>1); my @j = part(j=>1);
+    if (@e != @j) {
+	printf "$file: Number or e (%d) and j (%d) does not match!\n", 0+@e, 0+@j;
+    }
 
     for my $param (
 	{ part => 'e',
@@ -697,3 +710,28 @@ option --todo-everything --re ■+ --in jp
 
 option --too-many-index \
 	-nE '^\.IX( +(istart|iend))?+( +\S+){3,}' --in jp,macro
+
+#
+# --cmark: conflict marker style output
+#
+option --cmark \
+	--cm=N --need=1 \
+	--fs=once --ls=separate --cm FILE=555/ME \
+	--le --part macro --callback='sub{+{@_}->{match}}' \
+	--le --part e --callback='sub{"<<<<<<<\n".+{@_}->{match}}' \
+	--le --part j --callback='sub{"=======\n".+{@_}->{match}.">>>>>>>\n"}'
+
+option --cmark-with-number \
+	--cm=N --need=1 \
+	--fs=once --ls=separate --cm FILE=555/ME \
+	--le --part macro --callback='sub{+{@_}->{match}}' \
+	--le --part e --callback='sub{sprintf("<<<<<<< %d\n",++(state $i)).+{@_}->{match}}' \
+	--le --part j --callback='sub{"=======\n".+{@_}->{match}.sprintf(">>>>>>> %d\n",++(state $i))}'
+
+#
+# --sxs: side-by-side
+#
+option --sxs \
+	--cmark --of 'sdif -V --nocdif --cm OTEXT=/L24,NTEXT=/554,?MARK=N --mark=no'
+option --sxs \
+	--cmark --of 'sdif -V --nocdif --cm OTEXT=B/L24,NTEXT=N/455,UTEXT=C,?MARK=Y/554 --mark=no'
