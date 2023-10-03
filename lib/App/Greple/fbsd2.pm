@@ -247,7 +247,7 @@ it under the same terms as Perl itself.
 
 package App::Greple::fbsd2;
 
-our $VERSION = '3.01';
+our $VERSION = '3.02';
 
 use v5.14;
 use utf8;
