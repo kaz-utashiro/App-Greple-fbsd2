@@ -103,6 +103,7 @@ command.
 
     Execute sanity check for eg-jp document format.
 
+- **--side-by-side**
 - **--sxs**
 
     Print English and Japanese text in side-by-side format.  Requires

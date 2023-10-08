@@ -2,11 +2,14 @@ package Bombay::BsdBib;
 
 use v5.14;
 use warnings;
-use utf8;
 use Data::Dumper;
 
+use utf8;
+use open IO => ':utf8', ':std';
+use Encode;
+
 use Exporter 'import';
-our @EXPORT = qw(&bib_getmark &bib_makeref &bib_data &bib_ewb);
+our @EXPORT = qw(&bib_getmark &bib_makeref &bib_data &bib_tex);
 our @EXPORT_OK = qw($bibsort);
 
 use Carp;
@@ -17,7 +20,7 @@ $mydir = $myself;
 $mydir =~ s|/[^/]+$||;
 
 $refdir = "$mydir/../Refs";
-$bibdir = "$refdir/EWB";
+$bibdir = "$refdir/TEX";
 $bibindex = "$refdir/00INDEX";
 
 my %sortkeys;
@@ -46,6 +49,7 @@ sub bib_makeref {
     my @word = do {
 	grep { /[A-Za-z0-9]/ }
 	map { split }
+	map { s/\\s-\d([^\\]*?)\\s0/$1/gr }
 	@_;
     };
     join ' ', @word;
@@ -74,7 +78,7 @@ sub bib_data {
     $data;
 }
 
-sub bib_ewb {
+sub bib_tex {
     my $key = shift;
     my %bib;
     my @result;
@@ -95,18 +99,18 @@ sub bib_ewb {
     $data =~ s/\\s-\d([^\\]*?)\\s0/$1/g;
     $data =~ s/\\f[IRP]//g;
     $data =~ s/\\p//g;
-    $data =~ s%//%////%g;
+    #$data =~ s%//%////%g;
 
     while ($data =~ /^\%(\S+)\s+(.*(?:\n[^%\s].*)*)/mg) {
 	my($k, $v) = ($1, $2);
 	$v =~ s/\n/ /g;
 	if (defined $bib{$k}) {
-	    if ($k ne 'A' and $k ne 'O') {
+	    if ($k !~ /^[AOI]$/) {
 		carp "Duplicated entry $1 in \"$key\"";
 		next;
 	    }
 	    if (not ref $bib{$k}) {
-		$bib{$k} = [$bib{$k}];
+		$bib{$k} = [ $bib{$k} ];
 	    }
 	    push(@{$bib{$k}}, $v);
 	}
@@ -157,23 +161,29 @@ sub bib_ewb {
     ## vol.
     if (my $v = $bib{V}) {
 	if ($v =~ /^\d+$/) {
-	    $v = "vol. $v";
+	    $v = "vol.$v";
 	}
 	push(@result, $v);
     }
     ## no.
     if (my $n = $bib{N}) {
 	if ($n =~ /^[,\d]+$/) {
-	    $n = "no. $n";
+	    $n = "no.$n";
 	}
 	push(@result, $n);
     }
     ## pp.
     if ($bib{P}) {
-	push(@result, sprintf("pp. %s", $bib{P}));
+	push(@result, sprintf("pp.%s", $bib{P}));
     }
     ## issuer
-    push(@result, $bib{I});
+    if (my $I = $bib{I}) {
+	my @issuer = ref $I ? @$I : ($I);
+	for (@issuer) {
+	    s/(available from )?(?<url>(https?|ftp): *\/\/.*)$/\\url{$+{url}}/;
+	    push(@result, $_);
+	}
+    }
     ## city
     push(@result, $bib{C});
     ## date

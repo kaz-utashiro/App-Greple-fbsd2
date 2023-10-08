@@ -108,6 +108,8 @@ Seach edtion 1 and edtion 2 text files, and glossary files of each.
 
 Execute sanity check for eg-jp document format.
 
+=item B<--side-by-side>
+
 =item B<--sxs>
 
 Print English and Japanese text in side-by-side format.  Requires
@@ -247,7 +249,7 @@ it under the same terms as Perl itself.
 
 package App::Greple::fbsd2;
 
-our $VERSION = '3.02';
+our $VERSION = '3.03';
 
 use v5.14;
 use utf8;
@@ -731,7 +733,7 @@ option --cmark-with-number \
 #
 # --sxs: side-by-side
 #
-option --sxs \
-	--cmark --of 'sdif -V --nocdif --cm OTEXT=/L24,NTEXT=/554,?MARK=N --mark=no'
-option --sxs \
+option --side-by-side \
 	--cmark --of 'sdif -V --nocdif --cm OTEXT=B/L24,NTEXT=N/455,UTEXT=C,?MARK=Y/554 --mark=no'
+
+option --sxs --side-by-side

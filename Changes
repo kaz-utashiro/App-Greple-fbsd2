@@ -2,6 +2,10 @@ Revision history for Perl extension App-Greple-fbsd2
 
 {{$NEXT}}
 
+3.03 2023-10-08T15:38:35Z
+
+    - support References
+
 3.02 2023-10-03T09:46:50Z
 
     - require App::Greple::update@1.00
