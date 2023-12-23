@@ -5,24 +5,22 @@ use warnings;
 use utf8;
 use open IO => 'utf8', ':std';
 
+use Carp;
 use Data::Dumper;
 use App::tbl2latex::Util;
 
 my @jindex;
 my @phonetic;
 
-BEGIN {
-    use Carp;
-    use vars qw($gindex $myself $mydir $indexdir $indexlist $indexmap %yomi);
+my $myself = $0;
+my $mydir  = $myself =~ s|/[^/]+$||r;
 
-    $myself = $0;
-    $mydir = $myself;
-    $mydir =~ s|/[^/]+$||;
+my $indexdir  = "$mydir/../c17.index";
+my $indexlist = "$indexdir/INDEX_LIST";
+my $indexmap  = "$indexdir/INDEX_MAP";
 
-    $indexdir = "$mydir/../c17.index";
-    $indexlist = "$indexdir/INDEX_LIST";
-    $indexmap = "$indexdir/INDEX_MAP";
-}
+my $gindex;
+my %yomi;	# 日本語項目とそれの読みを格納するハッシュ
 
 sub new {
     my $proto = shift;
@@ -38,18 +36,18 @@ sub new {
     my @list = <LIST>; chomp @list;
     my @map = <MAP>; chomp @map;
     if (@list != @map) {
-	croak "wrong entory number";
+	croak "wrong entry number";
     }
 
-    for my $i (0..$#map) {
-	my @map = split(/\t+/, $map[$i]);
-	push(@jindex, $map[0]);
-	push(@phonetic, $map[1]);
+    for my $i (keys @map) {
+	my @map = split /\t+/, $map[$i];
+	push @jindex, $map[0];
+	push @phonetic, $map[1];
 	$index->{$list[$i]} = new IndexObj($list[$i], @map);
     }
 
     for (@map) {
-	my($jindex, $yomi) = split(/\t+/, $_);
+	my($jindex, $yomi) = split /\t+/, $_;
 	my @jindex = $jindex =~ /(\P{ASCII}+)/g;
 	$yomi //= $jindex;
 	my @yomi = $yomi =~ /(\P{ASCII}+)/g;
@@ -111,7 +109,7 @@ sub index {
     else {
 	carp "too many argument in .IX: @_";
     }
-    
+
     if ($range eq 'istart') {
 	$s =~ s://}:|(//}:g;
     } elsif ($range eq 'iend') {
@@ -124,23 +122,6 @@ sub index {
 my %var_table;
 BEGIN {
     %var_table = (
-#	'$Bv' => '3BSD',
-#	'$Bx' => '4BSD',
-#	'$b0' => '4.0BSD',
-#	'$b1' => '4.1BSD',
-#	'$b2' => '4.2BSD',
-#	'$b3' => '4.3BSD',
-#	'$b4' => '4.4BSD',
-#	'$4L' => '4.4BSD Lite',
-#	'$Fb' => 'FreeBSD',
-#	'$Ob' => 'OpenBSD',
-#	'$Nb' => 'NetBSD',
-#	'$Bs' => 'BSD',
-#	'$Lx' => 'Linux',
-#	'$s5' => 'System~V',
-#	'$UX' => 'UNIX',
-#	'$VX' => 'VAX',
-#	'$PC' => 'PC',
 	'$Bs' => 'BSD',
 	'$Bv' => '3BSD',
 	'$Bx' => '4BSD',
@@ -212,11 +193,18 @@ sub j {
 
 my($sub_it, $sub_bf);
 BEGIN {
-if (0) {
-    $sub_it = sub { sprintf("\\textit{%s}", @_) };
-    $sub_bf = sub { sprintf("{\\gt{}%s}", @_) };
-}
-    $sub_it = sub { sprintf("{\\it{%s}}", @_) };
+
+#   $sub_it = sub { sprintf("\\textit{%s}", @_) };
+#   $sub_bf = sub { sprintf("{\\gt{}%s}", @_) };
+
+    $sub_it = sub {
+	local $_ = shift;
+	if (/\P{ASCII}/) {
+	    $_;
+	} else {
+	    "{\\it{$_}}";
+	}
+    };
     $sub_bf = sub { sprintf("\\textbf{%s}", @_) };
 }
 
@@ -237,7 +225,7 @@ sub index_entry {
 	s/(?<=\P{ASCII}) +(?=\P{ASCII})//g;
 	s/([_&])/\\$1/g;
 
-	# "#!" を索引に入れるのは難しい
+	# "#!" を索引に入れるのは難しいので全角にして前後の空白を調整
 	s/#/♯/g;
 	s/!/\\hspace{-0.2em}！\\hspace{-0.2em}/g;
 
@@ -266,10 +254,7 @@ sub index_entry {
 package IndexObj;
 
 use strict;
-
-BEGIN {
-    use Carp;
-}
+use warnings;
 
 sub new {
     my $proto = shift;

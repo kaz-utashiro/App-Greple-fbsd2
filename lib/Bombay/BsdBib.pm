@@ -65,7 +65,7 @@ sub bib_data {
     my $key = shift;
     my $file = bib_key2file($key);
     my $data;
-    
+
     unless (open(DATA, $file)) {
 	carp "$!: $file";
 	return;
