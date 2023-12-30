@@ -197,6 +197,7 @@ sub bib_tex {
     if ($bib{O}) {
 	my @other = ref $bib{O} ? @{$bib{O}} : $bib{O};
 	foreach my $o (@other) {
+	    $o =~ s"( https?://(?: \\_ | [./\w\-] )+ )"\\url{$1}"xi;
 	    $bibtxt .= " $o";
 	}
     }
