@@ -305,7 +305,7 @@ sub check_not_translated{
     return 0 if /(?!■)\P{ASCII}++/;
     return 0 if m{\A(
 		      ■.*\n
-		      | \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|RN|SM|ZZ|PSPIC).*\n
+		      | \.(?:\\"|CO|sp|ds|nf|fi|nh|so|nr|hy|H|CT|IX|Ls|Ll|RN|SM|ZZ|PSPIC|SE).*\n
 		      | \.\[       \n (.+\n)+? \.\] \n
 		      | \.CI    .* \n (.+\n)+? \.Ce \n
 		      | \.EQ    .* \n (.+\n)+? \.EN \n
