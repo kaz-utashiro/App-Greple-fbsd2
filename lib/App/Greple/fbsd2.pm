@@ -301,6 +301,26 @@ sub line {
 # lint
 ######################################################################
 
+sub check_not_end_with_punct {
+    my %opt = @_;
+    state $ignore_re = qr{
+		( \.\[ .*\n (?s:.*?) ^\.\] \n
+		| \.YS .*\n (?s:.*?) ^\.YE \n
+		| \.CI .*\n (?s:.*?) ^\.Ce \n
+		| \.EQ .*\n (?s:.*?) ^\.EN \n
+		| \.(FI|FL) .*\n (?s:.*?) ^\.Fe \n
+		| \.(TI|TL) .*\n (?s:.*?) ^\.Te \n
+		| \.IX.*\n
+		| \\asis.*\n
+		)* }mx;
+    my($start, $end, $index, $match) = @opt{qw(start end index match)};
+    return '' if $match =~ /\A( $ignore_re | \.(\\\n|.)*\n )+\z/x;
+    return '' if $match =~ m{[:。](\\\&)?\n
+			     $ignore_re
+			     \z}xm;
+    return $match;
+}
+
 sub check_not_translated{
     return 0 if /(?!■)\P{ASCII}++/;
     return 0 if m{\A(
@@ -588,7 +608,10 @@ option --colorcode  --need 1 --regioncolor \
 option --ed1: --chdir $ENV{FreeBSDbook}/1st_FreeBSD/daemon3 --glob c$<shift>.*/?.j
 option --ed1 --ed1: ??
 
-option --ed2: --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c$<shift>.*/?.j
+option --ed2: \
+	-Mselect --x-select-path c00.preface/0.j \
+		 --x-select-path c17.index/Trailer.j \
+	--chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c$<shift>.*/?.j
 option --ed2 --ed2: ??
 
 option --gloss1 --chdir $ENV{FreeBSDbook}/1st_FreeBSD/daemon3/c15.gloss --glob */*.j
@@ -673,7 +696,9 @@ option --subst-word   --check-word --subst
 option --diff-word    --check-word --diff
 option --replace-word --check-word --overwrite
 
-option --for-text  --exclude :roffcomment: --ed2 --in j
+option --for-text \
+	--exclude :roffcomment: --ed2 --in j
+
 option --for-gloss --gloss2 --nocomment
 option --for-index --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c17.index/INDEX_*
 option --for-tbl   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.tbl
@@ -733,6 +758,14 @@ option --cmark-with-number \
 	--le --part macro --callback='sub{+{@_}->{match}}' \
 	--le --part e --callback='sub{sprintf("<<<<<<< %d\n",++(state $i)).+{@_}->{match}}' \
 	--le --part j --callback='sub{"=======\n".+{@_}->{match}.sprintf(">>>>>>> %d\n",++(state $i))}'
+
+option --check-punct \
+	-n \
+	--le --part j \
+	--exclude '(?m)^\.(Bl|Nl)(?s:.*?)(^\.(PP|LP|H)|\z)' \
+	--exclude '(?m)^\.(FL)(?s:.*?)(^\.(Fe)|\z)' \
+	--callback '&__PACKAGE__::check_not_end_with_punct'
+help --check-punct 句点「。」で終わっていない文を検索する
 
 #
 # --sxs: side-by-side
