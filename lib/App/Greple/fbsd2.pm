@@ -584,11 +584,11 @@ define :pat-code: ^\.CI(?s:.*?)^\.Ce
 define :pat-ref:  ^\.\[(?s:.*?)^\.\]
 define :pat-fn:   ^\.YS(?s:.*?)^\.YE
 
-option --in-tbl     --inside  :pat-tbl:
-option --in-fig     --inside  :pat-fig:
-option --in-code    --inside  :pat-code:
-option --in-ref     --inside  :pat-ref:
-option --in-fn      --inside  :pat-fn:
+option --in-tbl     --include :pat-tbl:
+option --in-fig     --include :pat-fig:
+option --in-code    --include :pat-code:
+option --in-ref     --include :pat-ref:
+option --in-fn      --include :pat-fn:
 option --ex-tbl     --exclude :pat-tbl:
 option --ex-fig     --exclude :pat-fig:
 option --ex-code    --exclude :pat-code:
