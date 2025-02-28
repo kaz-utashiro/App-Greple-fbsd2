@@ -4,7 +4,7 @@
       "Kazumasa Utashiro"
    ],
    "dynamic_config" : 0,
-   "generated_by" : "Minilla/v3.1.23, CPAN::Meta::Converter version 2.150010",
+   "generated_by" : "Minilla/v3.1.25, CPAN::Meta::Converter version 2.150010",
    "license" : [
       "perl_5"
    ],
@@ -42,13 +42,14 @@
       },
       "runtime" : {
          "requires" : {
-            "App::Greple" : "9.08",
-            "App::Greple::frame" : "0.07",
-            "App::Greple::git" : "0.04",
-            "App::Greple::subst" : "2.32",
-            "App::Greple::update" : "1.03",
-            "App::Greple::xp" : "0.04",
-            "App::sdif" : "4.28",
+            "App::Greple" : "9.22",
+            "App::Greple::charcode" : "0",
+            "App::Greple::frame" : "1.03",
+            "App::Greple::git" : "1.00",
+            "App::Greple::subst" : "2.36",
+            "App::Greple::update" : "1.04",
+            "App::Greple::xp" : "1.00",
+            "App::sdif" : "4.41",
             "Getopt::EX::Hashed" : "0",
             "JSON" : "0",
             "Moo" : "0",
@@ -82,6 +83,6 @@
       "LHazy <fhazy2255@gmail.com>",
       "YASUOKA Masahiko <yasuoka@yasuoka.net>"
    ],
-   "x_serialization_backend" : "JSON::PP version 4.12",
+   "x_serialization_backend" : "JSON::PP version 4.16",
    "x_static_install" : 1
 }
