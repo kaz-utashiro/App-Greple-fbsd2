@@ -773,6 +773,6 @@ help --check-punct 句点「。」で終わっていない文を検索する
 # --sxs: side-by-side
 #
 option --side-by-side \
-	--cmark --of 'sdif -V --nocdif --cm OTEXT=B/L24,NTEXT=N/455,UTEXT=C,?MARK=Y/554 --mark=no'
+	--cmark --of 'sdif -V --nocdif --no-filename --cm OTEXT=B/L24,NTEXT=N/455,UTEXT=C,?MARK=Y/554 --mark=no'
 
 option --sxs --side-by-side
