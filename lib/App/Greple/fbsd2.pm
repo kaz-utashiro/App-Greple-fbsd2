@@ -697,10 +697,13 @@ option --diff-word    --check-word --diff
 option --replace-word --check-word --overwrite
 
 option --for-text \
-	--exclude :roffcomment: --ed2 --in j
+	--roffsafe --ed2 --in j
+
+option --for-index \
+	--chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c17.index/INDEX_{LIST,MAP} \
+	--inside '^[^\t]+'
 
 option --for-gloss --gloss2 --nocomment
-option --for-index --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c17.index/INDEX_*
 option --for-tbl   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.tbl
 option --for-fig   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.{fig,xfig}
 option --for-svg   --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja.svg
@@ -708,8 +711,7 @@ option --for-code  --chdir $ENV{FreeBSDbook}/2nd_FreeBSD/ --glob c??.*/[a-z]*.ja
 
 option  --for-others \
 	--for-gloss \
-	--for-index \
-	--for-tbl   \
+	--for-tbl --roffsafe \
 	--for-fig   \
 	--for-code
 
