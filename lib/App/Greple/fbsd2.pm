@@ -562,7 +562,8 @@ option --nocomment --exclude :comment:
 
 define :roffcomment: ^\.\\\".*
 define :roffindex:   ^\.(IX|CO).*
-option --roffsafe --exclude :roffcomment: --exclude :roffindex:
+define :roffspecial: ^\.(so|PSPIC).*
+option --roffsafe --exclude :roffcomment: --exclude :roffindex: --exclude :roffspecial:
 
 option --part     &part($<shift>)
 option --by       --block  &part($<shift>)
@@ -583,6 +584,13 @@ define :pat-fig:  ^\.F[LI](?s:.*?)^\.Fe
 define :pat-code: ^\.CI(?s:.*?)^\.Ce
 define :pat-ref:  ^\.\[(?s:.*?)^\.\]
 define :pat-fn:   ^\.YS(?s:.*?)^\.YE
+define :pat-num:  (?xn) ( \
+	  \d+                (番目|番地|つ目|時間|ヵ月|[番年月日人つ]) \
+	| \d+(,\d+)*         (文字|[分個回行])                         \
+	| \d+(,\d+)*         (ビット|バイト|ワード|ページ|セクター?)   \
+	| \d+(,\d+)*(\.\d+)? ([秒])                                    \
+	)
+option --numeral -E :pat-num:
 
 option --in-tbl     --include :pat-tbl:
 option --in-fig     --include :pat-fig:
@@ -751,15 +759,15 @@ option --cmark \
 	--cm=N --need=1 \
 	--fs=once --ls=separate --cm FILE=555/ME \
 	--le --part macro --callback='sub{+{@_}->{match}}' \
-	--le --part e --callback='sub{"<<<<<<<\n".+{@_}->{match}}' \
-	--le --part j --callback='sub{"=======\n".+{@_}->{match}.">>>>>>>\n"}'
+	--le --part e     --callback='sub{"<<<<<<<\n".+{@_}->{match}}' \
+	--le --part j     --callback='sub{"=======\n".+{@_}->{match}.">>>>>>>\n"}'
 
 option --cmark-with-number \
 	--cm=N --need=1 \
 	--fs=once --ls=separate --cm FILE=555/ME \
 	--le --part macro --callback='sub{+{@_}->{match}}' \
-	--le --part e --callback='sub{sprintf("<<<<<<< %d\n",++(state $i)).+{@_}->{match}}' \
-	--le --part j --callback='sub{"=======\n".+{@_}->{match}.sprintf(">>>>>>> %d\n",++(state $i))}'
+	--le --part e     --callback='sub{sprintf("<<<<<<< %d\n",++(state $i)).+{@_}->{match}}' \
+	--le --part j     --callback='sub{"=======\n".+{@_}->{match}.sprintf(">>>>>>> %d\n",++(state $i))}'
 
 option --check-punct \
 	-n \
@@ -773,6 +781,7 @@ help --check-punct 句点「。」で終わっていない文を検索する
 # --sxs: side-by-side
 #
 option --side-by-side \
-	--cmark --of 'sdif -V --nocdif --no-filename --cm OTEXT=B/L24,NTEXT=N/455,UTEXT=C,?MARK=Y/554 --mark=no'
+	--cmark \
+	--of 'sdif -V --nocdif --no-filename --cm OTEXT=B/L24,NTEXT=N/455,UTEXT=C,?MARK=Y/554 --mark=no'
 
 option --sxs --side-by-side
